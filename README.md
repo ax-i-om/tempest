@@ -20,7 +20,7 @@
 
 ### About
 
-Omega is a simple, lightweight, and cross-platform solution designed to enable individuals to efficiently discover and extract active Mega links from paste platforms such as [Rentry.co](https://rentry.co). It was created to address the notable uptick paste sites being used to distribute content that violates copyright and piracy statutes.
+Omega is a simple, lightweight, and cross-platform solution designed to enable individuals to efficiently discover and extract active Mega links from paste platforms such as [Rentry.co](https://rentry.co). It was created to address the notable uptick in paste sites being used to distribute content that violates copyright and piracy statutes.
 
 ### Disclaimer
 
