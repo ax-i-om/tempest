@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"io"
 	"math/rand"
@@ -144,12 +145,16 @@ func runner(renturl string) error {
 }
 
 func main() {
+	var outputfile = flag.String("o", "", "Specify a file path for where the results will be appended:")
+
+	flag.Parse()
+
+	filename = *outputfile
+
 	fmt.Println("Omega Copyright (C) 2023 Axiom\nThis program comes with ABSOLUTELY NO WARRANTY.\nThis is free software, and you are welcome to redistribute it\nunder certain conditions")
 
-	time.Sleep(5 * time.Second)
-
 	for {
-		time.Sleep(250)
+		time.Sleep(200 * time.Nanosecond)
 		go func() {
 			err := runner("https://rentry.co/" + trueRand(5, "abcdefghijklmnopqrstuvwxyz0123456789") + "/raw")
 			if err != nil {
