@@ -36,7 +36,7 @@ func trueRand(n int, chars string) string {
 		remain--
 	}
 
-	return string(b[:])
+	return string(b)
 }
 
 func write(url string) error {
@@ -108,7 +108,7 @@ func checkRes(res *http.Response) error {
 func check(x string) (bool, error) {
 	re := regexp.MustCompile("([a-zA-Z0-9]{8}#)")
 	pre := re.FindString(x)
-	post := strings.Replace(pre, "#", "", -1)
+	post := strings.ReplaceAll(pre, "#", "")
 
 	url := "https://g.api.mega.co.nz/cs?id=5644474&n=" + post
 
