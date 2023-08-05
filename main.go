@@ -10,7 +10,6 @@ import (
 	"regexp"
 	"strings"
 	"time"
-	"unsafe"
 )
 
 const (
@@ -37,53 +36,73 @@ func trueRand(n int, chars string) string {
 		remain--
 	}
 
-	return *(*string)(unsafe.Pointer(&b))
+	return string(b[:])
 }
 
-func retrieveRaw(url string) {
+func write(url string) error {
+	f, err := os.OpenFile(filename, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0600)
+	if err != nil {
+		return err
+	}
+	writer := bufio.NewWriter(f)
+
+	body, err := io.ReadAll(f)
+	if err != nil {
+		writer.Flush()
+		return err
+	}
+
+	if !strings.Contains(string(body), url) {
+		writer.WriteString(url)
+		writer.WriteString("\n")
+	}
+	writer.Flush()
+	return nil
+}
+
+func getRes(url string) (*http.Response, error) {
 	method := "GET"
 	client := &http.Client{}
-	req, err := http.NewRequest(method, url, nil)
 
+	req, err := http.NewRequest(method, url, nil)
 	if err != nil {
-		fmt.Println(err)
-		return
+		return nil, err
 	}
+
 	res, err := client.Do(req)
 	if err != nil {
-		fmt.Println(err)
-		return
+		return nil, err
 	}
 
-	defer res.Body.Close()
+	return res, nil
+}
 
+func checkRes(res *http.Response) error {
 	if res.StatusCode == 200 {
 		body, err := io.ReadAll(res.Body)
 		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
+			return err
 		}
+
 		re := regexp.MustCompile("https://mega.nz/(folder|file)/([a-zA-Z0-9]{0,8})#([a-zA-Z0-9_-]{43}|[a-zA-Z0-9_-]{22})")
 		x := re.FindAllString(string(body), -1)
-		if x == nil {
-			// fmt.Println("z")
-		} else {
+		if len(x) > 0 {
 			for _, v := range x {
 				x, err := check(v)
 				if err != nil {
-					fmt.Println(err)
-					break
+					return err
 				}
 				if x {
 					fmt.Println("VALID: ", v)
-					write(v)
+					err := write(v)
+					if err != nil {
+						return err
+					}
 				}
 			}
-
 		}
-
 	}
-
+	return nil
 }
 
 func check(x string) (bool, error) {
@@ -92,35 +111,36 @@ func check(x string) (bool, error) {
 	post := strings.Replace(pre, "#", "", -1)
 
 	url := "https://g.api.mega.co.nz/cs?id=5644474&n=" + post
-	method := "GET"
 
-	client := &http.Client{}
-	req, err := http.NewRequest(method, url, nil)
-
+	res, err := getRes(url)
 	if err != nil {
-		fmt.Println(err)
 		return false, err
 	}
-	req.Header.Add("Cookie", "geoip=US")
-
-	res, err := client.Do(req)
-	if err != nil {
-		fmt.Println(err)
-		return false, err
-	}
-	defer res.Body.Close()
 
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		fmt.Println(err)
 		return false, err
 	}
 	if strings.Contains(string(body), "-2") {
-		return true, nil
+		return true, res.Body.Close()
 	} else {
-		return false, nil
+		return false, res.Body.Close()
 	}
 
+}
+
+func runner(renturl string) error {
+	res, err := getRes(renturl)
+	if err != nil {
+		return err
+	}
+
+	err = checkRes(res)
+	if err != nil {
+		return err
+	}
+
+	return res.Body.Close()
 }
 
 func main() {
@@ -130,28 +150,12 @@ func main() {
 
 	for {
 		time.Sleep(250)
-		go retrieveRaw("https://rentry.co/" + trueRand(5, "abcdefghijklmnopqrstuvwxyz0123456789") + "/raw")
-	}
-}
-
-func write(url string) {
-	f, err := os.OpenFile(filename, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0644)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-	writer := bufio.NewWriter(f)
-
-	defer writer.Flush()
-
-	body, err := io.ReadAll(f)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	if !strings.Contains(string(body), url) {
-		writer.WriteString(url)
-		writer.WriteString("\n")
+		go func() {
+			err := runner("https://rentry.co/" + trueRand(5, "abcdefghijklmnopqrstuvwxyz0123456789") + "/raw")
+			if err != nil {
+				fmt.Println(err)
+				os.Exit(1)
+			}
+		}()
 	}
 }
