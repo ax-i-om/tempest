@@ -39,9 +39,9 @@ It is the end user's responsibility to obey all applicable local, state, and fed
 
 1. Fetch the repository via ***git clone***: `git clone https://github.com/ax-i-om/bitcrook.git`
 2. Navigate to the root directory of of the cloned repository via ***cd***: `cd omega`
-3. In your preferred terminal, enter and run: `go run main.go`
+3. In your preferred terminal, enter and run: `go run main.go -o results.txt`
 
  ***OR***
 
 1. Install the repository via ***go install***: `go install github.com/ax-i-om/omega@latest`
-2. In your preferred terminal, enter and run: `omega`
+2. In your preferred terminal, enter and run: `omega -o results.txt`
