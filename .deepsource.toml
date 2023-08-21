@@ -4,4 +4,4 @@ version = 1
 name = "go"
 
   [analyzers.meta]
-  import_root = "github.com/ax-i-om/omega"
+  import_root = "github.com/ax-i-om/vigor"

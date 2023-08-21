@@ -1,27 +1,43 @@
+/*
+Vigor - Leveraging paste sites as a medium for discovery
+Copyright © 2023 ax-i-om <addressaxiom@pm.me>
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 package main
 
 import (
-	"bufio"
-	"flag"
 	"fmt"
 	"io"
 	"math/rand"
-	"net/http"
 	"os"
-	"regexp"
 	"strings"
 	"time"
+
+	"github.com/ax-i-om/vigor/internal/req"
+	"github.com/ax-i-om/vigor/pkg/modules/gofile"
+	"github.com/ax-i-om/vigor/pkg/modules/mega"
 )
+
+var src = rand.NewSource(time.Now().UnixNano())
 
 const (
 	leIndexBits = 6
 	leIndexMask = 1<<leIndexBits - 1
 	leIndexMax  = 63 / leIndexBits
 )
-
-var src = rand.NewSource(time.Now().UnixNano())
-
-var filename = trueRand(16, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
 
 func trueRand(n int, chars string) string {
 	b := make([]byte, n)
@@ -40,126 +56,56 @@ func trueRand(n int, chars string) string {
 	return string(b)
 }
 
-func write(url string) error {
-	f, err := os.OpenFile(filename, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0600)
+func runner(renturl string) error {
+	// Performs a get request on the randomly generated Rentry.co URL.
+	res, err := req.GetRes(renturl)
 	if err != nil {
 		return err
 	}
-	writer := bufio.NewWriter(f)
-
-	body, err := io.ReadAll(f)
-	if err != nil {
-		writer.Flush()
-		return err
-	}
-
-	if !strings.Contains(string(body), url) {
-		writer.WriteString(url)
-		writer.WriteString("\n")
-	}
-	writer.Flush()
-	return nil
-}
-
-func getRes(url string) (*http.Response, error) {
-	method := "GET"
-	client := &http.Client{}
-
-	req, err := http.NewRequest(method, url, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	res, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-
-	return res, nil
-}
-
-func checkRes(res *http.Response) error {
+	// If a Status Code of 200 is returned, that means we randomly generated a valid Rentry.co link and can continue
 	if res.StatusCode == 200 {
+		// Prepare the contents of the response to be read
 		body, err := io.ReadAll(res.Body)
 		if err != nil {
 			return err
 		}
+		// Convert the slice of bytes to a string
+		conv := string(body)
 
-		re := regexp.MustCompile("https://mega.nz/(folder|file)/([a-zA-Z0-9]{0,8})#([a-zA-Z0-9_-]{43}|[a-zA-Z0-9_-]{22})")
-		x := re.FindAllString(string(body), -1)
-		if len(x) > 0 {
-			for _, v := range x {
-				x, err := check(v)
-				if err != nil {
-					return err
-				}
-				if x {
-					fmt.Println("VALID: ", v)
-					err := write(v)
-					if err != nil {
-						return err
-					}
-				}
-			}
+		// Delegate the string to all specified modules
+		// Mega Module
+		_, err = mega.Delegate(conv)
+		if err != nil {
+			return err
+		}
+		// Gofile Module
+		_, err = gofile.Delegate(conv)
+		if err != nil {
+			return err
 		}
 	}
-	return nil
-}
-
-func check(x string) (bool, error) {
-	re := regexp.MustCompile("([a-zA-Z0-9]{8}#)")
-	pre := re.FindString(x)
-	post := strings.ReplaceAll(pre, "#", "")
-
-	url := "https://g.api.mega.co.nz/cs?id=5644474&n=" + post
-
-	res, err := getRes(url)
-	if err != nil {
-		return false, err
-	}
-
-	body, err := io.ReadAll(res.Body)
-	if err != nil {
-		return false, err
-	}
-	if strings.Contains(string(body), "-2") {
-		return true, res.Body.Close()
-	} else {
-		return false, res.Body.Close()
-	}
-
-}
-
-func runner(renturl string) error {
-	res, err := getRes(renturl)
-	if err != nil {
-		return err
-	}
-
-	err = checkRes(res)
-	if err != nil {
-		return err
-	}
-
 	return res.Body.Close()
 }
 
 func main() {
-	var outputfile = flag.String("o", "", "Specify a file path for where the results will be appended:")
-
-	flag.Parse()
-
-	filename = *outputfile
-
-	fmt.Println("Omega Copyright (C) 2023 Axiom\nThis program comes with ABSOLUTELY NO WARRANTY.\nThis is free software, and you are welcome to redistribute it\nunder certain conditions")
+	// Printing license information to the terminal
+	fmt.Println("Vigor Copyright (C) 2023 Axiom\nThis program comes with ABSOLUTELY NO WARRANTY.\nThis is free software, and you are welcome to redistribute it\nunder certain conditions")
 
 	for {
-		time.Sleep(200 * time.Nanosecond)
+		time.Sleep(1 * time.Millisecond) // Sleeps for 1 millisecond (lol)
 		go func() {
 			err := runner("https://rentry.co/" + trueRand(5, "abcdefghijklmnopqrstuvwxyz0123456789") + "/raw")
 			if err != nil {
-				fmt.Println(err)
-				os.Exit(1)
+				e := err.Error()
+				if !strings.Contains(e, "Get") && !strings.Contains(e, "EOF") {
+					if strings.Contains(e, "connection reset by peer") || strings.Contains(e, "client connection force closed via ClientConn.Close") || strings.Contains(e, "closed") {
+						// SWAP HERE
+						// Ignore this
+					} else {
+						fmt.Println(e)
+						os.Exit(1)
+					}
+				}
 			}
 		}()
 	}
