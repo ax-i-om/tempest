@@ -27,8 +27,12 @@ import (
 	"time"
 
 	"github.com/ax-i-om/vigor/internal/req"
+	"github.com/ax-i-om/vigor/pkg/modules/bunkr"
+	"github.com/ax-i-om/vigor/pkg/modules/cyberdrop"
 	"github.com/ax-i-om/vigor/pkg/modules/gofile"
+	"github.com/ax-i-om/vigor/pkg/modules/googledrive"
 	"github.com/ax-i-om/vigor/pkg/modules/mega"
+	"github.com/ax-i-om/vigor/pkg/modules/sendvid"
 )
 
 var src = rand.NewSource(time.Now().UnixNano())
@@ -80,6 +84,26 @@ func runner(renturl string) error {
 		}
 		// Gofile Module
 		_, err = gofile.Delegate(conv)
+		if err != nil {
+			return err
+		}
+		// Sendvid Module
+		_, err = sendvid.Delegate(conv)
+		if err != nil {
+			return err
+		}
+		// Cyberdrop Module
+		_, err = cyberdrop.Delegate(conv)
+		if err != nil {
+			return err
+		}
+		// Bunkr Module
+		_, err = bunkr.Delegate(conv)
+		if err != nil {
+			return err
+		}
+		// Google Drive Module
+		_, err = googledrive.Delegate(conv)
 		if err != nil {
 			return err
 		}

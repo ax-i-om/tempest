@@ -3,7 +3,7 @@
     <h1 align="center">Vigor</h1>
   <p align="center">
     <a href="https://goreportcard.com/report/github.com/ax-i-om/vigor"><img src="https://goreportcard.com/badge/github.com/ax-i-om/vigor" alt="Go Report Card"></a>
-    <a><img src="https://img.shields.io/badge/version-0.1.1-blue.svg" alt="v0.1.1"></a><br>
+    <a><img src="https://img.shields.io/badge/version-0.1.2-blue.svg" alt="v0.1.2"></a><br>
     Leveraging paste sites as a medium for discovery<br>
 </a>
   </p><br>
@@ -15,7 +15,7 @@
   - [About](#about)
   - [Disclaimer](#disclaimer)
   - [Installation and Usage](#installation-and-usage)
-
+  - [Cloud Storage / File Sharing Platform Modules](#cloud-storage--file-sharing-platform-modules)
 ## Information
 
 ### About
@@ -42,3 +42,14 @@ It is the end user's responsibility to obey all applicable local, state, and fed
 If you want to output the results to a file, append this to the command: `2>&1 | tee results.txt` <br>
 For example `vigor 2>&1 | tee results.txt`   ***or***   `go run main.go 2>&1 | tee results.txt` (may vary depending on operating system) <br>
 CAUTION: IF AN ALREADY EXISTING FILE IS SPECIFIED, THIS WILL OVERWRITE THE CONTENTS
+
+### Cloud Storage / File Sharing Platform Modules
+
+| Module    | Expression                                                                                    |   Validation Method   | Domain Variations? | Status |
+| :-------: | --------------------------------------------------------------------------------------------- | :------: | -------- | :----: |
+| Bunkr      | (https\|http)://bunkrr.su/a/([a-zA-Z0-9]{8}) |  Status Code  | Yes       | Functioning | 
+| Cyberdrop      | (https\|http)://cyberdrop.me/a/([a-zA-Z0-9]{8}) |  Status Code  | No       | Functioning | 
+| Gofile      | (https\|http)://gofile.io/d/([a-zA-Z0-9]{6}) |  Body Contents  | No       | Functioning | 
+| Google Drive | (https\|http)://drive.google.com/(folder\|file\|drive)/(d\|folders)/(1[a-zA-Z0-9_-]{32}\|0[a-zA-Z0-9_-]{27}) | Status Code | No | Functioning |
+| Mega      | (https\|http)://mega.nz/(folder\|file)/([a-zA-Z0-9]{0,8})#([a-zA-Z0-9_-]{43}\|[a-zA-Z0-9_-]{22}) |  Body Contents  | No       | Functioning | 
+| Sendvid | (https\|http)://sendvid.com/([a-z0-9]{8}) | Status code | No | Functioning
