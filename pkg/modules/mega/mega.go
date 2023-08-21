@@ -31,7 +31,7 @@ import (
 // Extract returns a slice of all Mega links contained within a string, if any.
 func Extract(res string) ([]string, error) {
 	// Compile the RegEx expression to be used in the identification and extraction of the Mega links
-	re := regexp.MustCompile("(https|http)://mega.nz/(folder|file)/([a-zA-Z0-9]{0,8})#([a-zA-Z0-9_-]{43}|[a-zA-Z0-9_-]{22})")
+	re := regexp.MustCompile("^(https|http)://mega.nz/(folder|file)/([a-zA-Z0-9]{0,8})#([a-zA-Z0-9_-]{43}|[a-zA-Z0-9_-]{22})")
 	// Return all Mega links found within an http response
 	return re.FindAllString(res, -1), nil
 }
@@ -68,7 +68,7 @@ func Validate(x string) (bool, error) {
 	}
 }
 
-// Takes a string as an argument and returns a slice of valid Mega links found within the response (if any) and an error
+// Delegate takes a string as an argument and returns a slice of valid Mega links found within the response (if any) and an error
 func Delegate(res string) ([]string, error) {
 	// Use Extract() to extract any existing Mega links from the response
 	x, err := Extract(res)

@@ -30,7 +30,7 @@ import (
 // Extract returns a slice of all Bunkr links contained within a string, if any.
 func Extract(res string) ([]string, error) {
 	// Compile the RegEx expression to be used in the identification and extraction of the Bunkr links
-	re := regexp.MustCompile("(https|http)://bunkrr.su/a/([a-zA-Z0-9]{8})")
+	re := regexp.MustCompile("^(https|http)://bunkrr.su/a/([a-zA-Z0-9]{8})")
 	// Return all Bunkr links found within an http response
 	return re.FindAllString(res, -1), nil
 }
@@ -59,7 +59,7 @@ func Validate(x string) (bool, error) {
 	}
 }
 
-// Takes a string as an argument and returns a slice of valid Senvid links found within the response (if any) and an error
+// Delegate takes a string as an argument and returns a slice of valid Senvid links found within the response (if any) and an error
 func Delegate(res string) ([]string, error) {
 	// Use Convert() to convert all bunkr link domains to bunkrr.su (the currently active one)
 	c := Convert(res)

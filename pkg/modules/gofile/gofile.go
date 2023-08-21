@@ -31,7 +31,7 @@ import (
 // Extract returns a slice of all Gofile links contained within a string, if any.
 func Extract(res string) ([]string, error) {
 	// Compile the RegEx expression to be used in the identification and extraction of the Gofile links
-	re := regexp.MustCompile("(https|http)://gofile.io/d/([a-zA-Z0-9]{6})")
+	re := regexp.MustCompile("^(https|http)://gofile.io/d/([a-zA-Z0-9]{6})")
 	// Return all Gofile links found within an http response
 	return re.FindAllString(res, -1), nil
 }
@@ -58,7 +58,7 @@ func Validate(x string) (bool, error) {
 	}
 }
 
-// Takes a string as an argument and returns a slice of valid Gofile links found within the response (if any) and an error
+// Delegate takes a string as an argument and returns a slice of valid Gofile links found within the response (if any) and an error
 func Delegate(res string) ([]string, error) {
 	// Use Extract() to extract any existing Gofile links from the response
 	x, err := Extract(res)

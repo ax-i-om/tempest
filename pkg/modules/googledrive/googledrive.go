@@ -29,7 +29,7 @@ import (
 // Extract returns a slice of all Google Drive links contained within a string, if any.
 func Extract(res string) ([]string, error) {
 	// Compile the RegEx expression to be used in the identification and extraction of the Google Drive links
-	re := regexp.MustCompile("(https|http)://drive.google.com/(folder|file|drive)/(d|folders)/(1[a-zA-Z0-9_-]{32}|0[a-zA-Z0-9_-]{27})")
+	re := regexp.MustCompile("^(https|http)://drive.google.com/(folder|file|drive)/(d|folders)/(1[a-zA-Z0-9_-]{32}|0[a-zA-Z0-9_-]{27})")
 	// Return all Google Drive links found within an http response
 	return re.FindAllString(res, -1), nil
 }
@@ -49,7 +49,7 @@ func Validate(x string) (bool, error) {
 	}
 }
 
-// Takes a string as an argument and returns a slice of valid Senvid links found within the response (if any) and an error
+// Delegate takes a string as an argument and returns a slice of valid Senvid links found within the response (if any) and an error
 func Delegate(res string) ([]string, error) {
 	// Use Extract() to extract any existing Google Drive links from the response
 	x, err := Extract(res)
