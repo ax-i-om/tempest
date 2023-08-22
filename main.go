@@ -29,6 +29,7 @@ import (
 	"github.com/ax-i-om/vigor/internal/req"
 	"github.com/ax-i-om/vigor/pkg/modules/bunkr"
 	"github.com/ax-i-om/vigor/pkg/modules/cyberdrop"
+	"github.com/ax-i-om/vigor/pkg/modules/dood"
 	"github.com/ax-i-om/vigor/pkg/modules/gofile"
 	"github.com/ax-i-om/vigor/pkg/modules/googledrive"
 	"github.com/ax-i-om/vigor/pkg/modules/mega"
@@ -104,6 +105,11 @@ func runner(renturl string) error {
 		}
 		// Google Drive Module
 		_, err = googledrive.Delegate(conv)
+		if err != nil {
+			return err
+		}
+		// Dood Module
+		_, err = dood.Delegate(conv)
 		if err != nil {
 			return err
 		}
