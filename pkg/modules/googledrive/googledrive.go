@@ -1,5 +1,5 @@
 /*
-Vigor - Leveraging paste sites as a medium for discovery
+Tempest- Leveraging paste sites as a medium for discovery
 Copyright © 2023 ax-i-om <addressaxiom@pm.me>
 
 This program is free software: you can redistribute it and/or modify
@@ -20,18 +20,25 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package googledrive
 
 import (
-	"fmt"
+	"io"
 	"regexp"
+	"strings"
 
-	"github.com/ax-i-om/vigor/internal/req"
+	"github.com/ax-i-om/tempest/internal/hdl"
+	"github.com/ax-i-om/tempest/internal/models"
+	"github.com/ax-i-om/tempest/internal/req"
 )
+
+// Compile the RegEx expression to be used in the identification and extraction of the Google Drive links
+var gLink *regexp.Regexp = regexp.MustCompile("(https|http)://drive.google.com/(folder|file|drive)/(d|folders)/(1[a-zA-Z0-9_-]{32}|0[a-zA-Z0-9_-]{27})")
+
+// Compile the RegEx expression for extracting the area that contains the title
+var roughTitle *regexp.Regexp = regexp.MustCompile(`<title>(.*?)</title>`)
 
 // Extract returns a slice of all Google Drive links contained within a string, if any.
 func Extract(res string) ([]string, error) {
-	// Compile the RegEx expression to be used in the identification and extraction of the Google Drive links
-	re := regexp.MustCompile("^(https|http)://drive.google.com/(folder|file|drive)/(d|folders)/(1[a-zA-Z0-9_-]{32}|0[a-zA-Z0-9_-]{27})")
 	// Return all Google Drive links found within an http response
-	return re.FindAllString(res, -1), nil
+	return gLink.FindAllString(res, -1), nil
 }
 
 // Validate performs a GET request to the Google Drive URL and uses the response status code to identify its validity
@@ -50,7 +57,7 @@ func Validate(x string) (bool, error) {
 }
 
 // Delegate takes a string as an argument and returns a slice of valid Senvid links found within the response (if any) and an error
-func Delegate(res string) ([]string, error) {
+func Delegate(res string) ([]models.Entry, error) {
 	// Use Extract() to extract any existing Google Drive links from the response
 	x, err := Extract(res)
 	if err != nil {
@@ -59,7 +66,7 @@ func Delegate(res string) ([]string, error) {
 	// Check if the return slice of Google Drive links is empty
 	if len(x) > 0 {
 		// Create a new, empty slice where we will append any valid Google Drive links
-		var results []string = nil
+		var results []models.Entry = nil
 		// Loop through each Google Drive link within the slice
 		for _, v := range x {
 			// Call the Validate function in order to check whether or not the link is valid
@@ -70,8 +77,39 @@ func Delegate(res string) ([]string, error) {
 			}
 			// If x, the bool return by Validate(), is true: output the result to the terminal and append the link to the specified results slice.
 			if x {
-				fmt.Println("GOOGLE DRIVE: ", v)
-				results = append(results, v)
+				// Get body contents of the sendvid link
+				res, err := req.GetRes(v)
+				if err != nil {
+					continue
+				}
+
+				// Read results of the *http.Response body
+				body, err := io.ReadAll(res.Body)
+				if err != nil {
+					continue
+				}
+
+				// Convert read results to a string
+				contents := string(body)
+
+				// Extract title
+				rt := roughTitle.FindString(contents)
+				t1 := strings.ReplaceAll(rt, `<title>`, ``)
+				t2 := strings.ReplaceAll(t1, `</title>`, ``)
+				title := strings.ReplaceAll(t2, ` - Google Drive`, ``)
+
+				fTyp := ""
+
+				if strings.Contains(v, `/file/`) {
+					fTyp = "File"
+				} else {
+					fTyp = "Folder"
+				}
+
+				// Create type Entry and specify the respective values
+				ent := models.Entry{Link: v, Service: "Google Drive", LastValidation: hdl.Time(), Type: fTyp, Title: title}
+				// Append the entry to the results slice to be returned to the main runner
+				results = append(results, ent)
 			}
 		}
 		// When the loop is finished, return the results slice

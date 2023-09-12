@@ -16,27 +16,11 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-// Package req contains functions that are used when performing network requests
-package req
+// Package hdl contains handler functions that can be modified to tailor specific preferences such as date/time format.
+package hdl
 
-import (
-	"net/http"
-)
+import "time"
 
-// GetRes sends a request to a specified URL and returns and *http.Response and error that will be nil if successful.
-func GetRes(link string) (*http.Response, error) {
-	method := "GET"
-	client := &http.Client{}
-
-	req, err := http.NewRequest(method, link, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	res, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-
-	return res, nil
+func Time() string {
+	return time.Now().Format("Jan 02, 2006")
 }

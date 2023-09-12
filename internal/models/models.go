@@ -16,27 +16,25 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-// Package req contains functions that are used when performing network requests
-package req
+// Package models contains type declarations used in Tempest
+package models
 
-import (
-	"net/http"
-)
+// Entry
+type Entry struct {
+	Link           string `json:"link"`
+	LastValidation string `json:"lastvalidation"`
 
-// GetRes sends a request to a specified URL and returns and *http.Response and error that will be nil if successful.
-func GetRes(link string) (*http.Response, error) {
-	method := "GET"
-	client := &http.Client{}
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	Service     string `json:"service"`
+	Uploaded    string `json:"uploaded"`
 
-	req, err := http.NewRequest(method, link, nil)
-	if err != nil {
-		return nil, err
-	}
+	Type      string `json:"type"`
+	Size      string `json:"size"`
+	Length    string `json:"length"`
+	FileCount string `json:"filecount"`
 
-	res, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-
-	return res, nil
+	Thumbnail string `json:"thumbnail"`
+	Downloads string `json:"downloads"`
+	Views     string `json:"views"`
 }
