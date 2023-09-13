@@ -133,6 +133,34 @@ func printUsage() {
 	fmt.Println()
 }
 
+func write(results []models.Entry) {
+	for _, v := range results {
+		switch mode {
+		case "console":
+			fmt.Println(v.Service, ": ", v.Link)
+		case "json":
+			vByte, err := json.Marshal(v)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%s\n", err)
+				continue
+			}
+			_, err = jsonfile.WriteString(string(vByte) + ",\n")
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%s\n", err)
+				continue
+			}
+		case "csv":
+			row := []string{v.Link, v.LastValidation, v.Title, v.Description, v.Service, v.Uploaded, v.Type, v.Size, v.Length, v.FileCount, v.Thumbnail, v.Downloads, v.Views}
+			err := writer.Write(row)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%s\n", err)
+				continue
+			}
+			writer.Flush()
+		}
+	}
+}
+
 func worker(renturl string) error {
 	// Performs a get request on the randomly generated Rentry.co URL.
 	res, err := req.GetRes(renturl)
@@ -149,6 +177,7 @@ func worker(renturl string) error {
 		// Convert the slice of bytes to a string
 		conv := string(body)
 
+		// Create results slice
 		var results []models.Entry = nil
 
 		// Delegate the string to all specified modules
@@ -202,34 +231,42 @@ func worker(renturl string) error {
 		}
 		results = append(results, vDood...)
 
-		for _, v := range results {
-			switch mode {
-			case "console":
-				fmt.Println(v.Service, ": ", v.Link)
-			case "json":
-				vByte, err := json.Marshal(v)
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "%s\n", err)
-					continue
-				}
-				_, err = jsonfile.WriteString(string(vByte) + ",\n")
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "%s\n", err)
-					continue
-				}
-			case "csv":
-				row := []string{v.Link, v.LastValidation, v.Title, v.Description, v.Service, v.Uploaded, v.Type, v.Size, v.Length, v.FileCount, v.Thumbnail, v.Downloads, v.Views}
-				err := writer.Write(row)
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "%s\n", err)
-					continue
-				}
-				writer.Flush()
-			}
-		}
+		write(results)
 	}
 
 	return res.Body.Close()
+}
+
+func run(cntx context.Context) error {
+	for {
+		select {
+		case <-cntx.Done():
+			fmt.Println("  ->  Attempting to gracefully shutdown Tempest")
+			fmt.Println("\nWaiting for", wg.GetCount(), "GoRoutines to finish execution. Please wait... (~15s)")
+
+			wg.Wait()
+			wipe()
+
+			fmt.Println("Tempest was gracefully shut down")
+
+			return nil
+		default:
+			time.Sleep(1 * time.Millisecond) // Sleeps for 1 millisecond (lol)
+
+			wg.Add(1)
+
+			go func() {
+				defer wg.Done()
+				err := worker("https://rentry.co/" + trueRand(5, "abcdefghijklmnopqrstuvwxyz0123456789") + "/raw")
+				if err != nil {
+					if err = swapCheck(err); err != nil {
+						fmt.Fprintf(os.Stderr, "%s\n", err)
+						wipe()
+					}
+				}
+			}()
+		}
+	}
 }
 
 func main() {
@@ -389,36 +426,4 @@ func main() {
 		os.Exit(1)
 	}
 	os.Exit(0)
-}
-
-func run(cntx context.Context) error {
-	for {
-		select {
-		case <-cntx.Done():
-			fmt.Println("  ->  Attempting to gracefully shutdown Tempest")
-			fmt.Println("\nWaiting for", wg.GetCount(), "GoRoutines to finish execution. Please wait... (~15s)")
-
-			wg.Wait()
-			wipe()
-
-			fmt.Println("Tempest was gracefully shut down")
-
-			return nil
-		default:
-			time.Sleep(1 * time.Millisecond) // Sleeps for 1 millisecond (lol)
-
-			wg.Add(1)
-
-			go func() {
-				defer wg.Done()
-				err := worker("https://rentry.co/" + trueRand(5, "abcdefghijklmnopqrstuvwxyz0123456789") + "/raw")
-				if err != nil {
-					if err = swapCheck(err); err != nil {
-						fmt.Fprintf(os.Stderr, "%s\n", err)
-						wipe()
-					}
-				}
-			}()
-		}
-	}
 }
