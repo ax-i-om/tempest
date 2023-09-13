@@ -91,18 +91,17 @@ func wipe() {
 	}
 }
 
-func swapCheck(err error) {
+func swapCheck(err error) error {
 	e := err.Error()
 	if !strings.Contains(e, "Get") && !strings.Contains(e, "EOF") {
 		if strings.Contains(e, "connection reset by peer") || strings.Contains(e, "client connection force closed via ClientConn.Close") || strings.Contains(e, "closed") {
 			// SWAP HERE
 			// Ignore this
 		} else {
-			fmt.Fprintf(os.Stderr, "%s\n", err)
-			wipe()
-			os.Exit(1)
+			return err
 		}
 	}
+	return nil
 }
 
 func fixName(str, substr string) string {
@@ -250,16 +249,16 @@ func main() {
 		printUsage()
 		os.Exit(0)
 	} else if len(args) == 2 {
-		if args[1] == "console" {
-			mode = "console"
-			filename = ""
-			fmt.Println("Output Mode: Console")
-			fmt.Println("")
-		} else {
+		if args[1] != "console" {
 			printUsage()
 			fmt.Fprintf(os.Stderr, "%s\n", errors.New("file name/path not specified"))
 			os.Exit(0)
 		}
+		mode = "console"
+		filename = ""
+		fmt.Println("Output Mode: Console")
+		fmt.Println("")
+
 	} else if len(args) == 3 {
 		switch args[1] {
 		case "json":
@@ -267,48 +266,47 @@ func main() {
 				printUsage()
 				fmt.Fprintf(os.Stderr, "%s\n", errors.New("json file name/path not specified"))
 				os.Exit(0)
-			} else {
-				mode = "json"
-				filename = fixName(args[2], ".json")
-				fmt.Println("Output Mode: JSON")
-				fmt.Println("File Name: ", filename)
-				fmt.Println()
-				jsonfile, err = os.OpenFile(filename, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
-				if err != nil {
-					wipe()
-					fmt.Fprintf(os.Stderr, "%s\n", err)
-					os.Exit(1)
-				}
-
 			}
+			mode = "json"
+			filename = fixName(args[2], ".json")
+			fmt.Println("Output Mode: JSON")
+			fmt.Println("File Name: ", filename)
+			fmt.Println()
+			jsonfile, err = os.OpenFile(filename, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
+			if err != nil {
+				wipe()
+				fmt.Fprintf(os.Stderr, "%s\n", err)
+				os.Exit(1)
+			}
+
 		case "csv":
 			if args[2] == "" || len(args[2]) < 1 {
 				printUsage()
 				fmt.Fprintf(os.Stderr, "%s\n", errors.New("json file name/path not specified"))
 				os.Exit(0)
-			} else {
-				mode = "csv"
-				filename = fixName(args[2], ".csv")
-				fmt.Println("Output Mode: CSV")
-				fmt.Println("File Name: ", filename)
-				fmt.Println()
-				csvfile, err = os.OpenFile(filename, os.O_WRONLY|os.O_APPEND, 0600)
-				existed = true
-				if err != nil {
-					if errors.Is(err, os.ErrNotExist) {
-						csvfile, err = os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0600)
-						if err != nil {
-							fmt.Fprintf(os.Stderr, "%s\n", err)
-							wipe()
-							os.Exit(1)
-						}
-						existed = false
-					} else {
-						wipe()
+			}
+			mode = "csv"
+			filename = fixName(args[2], ".csv")
+			fmt.Println("Output Mode: CSV")
+			fmt.Println("File Name: ", filename)
+			fmt.Println()
+			csvfile, err = os.OpenFile(filename, os.O_WRONLY|os.O_APPEND, 0600)
+			existed = true
+			if err != nil {
+				if errors.Is(err, os.ErrNotExist) {
+					csvfile, err = os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0600)
+					if err != nil {
 						fmt.Fprintf(os.Stderr, "%s\n", err)
+						wipe()
 						os.Exit(1)
 					}
+					existed = false
+				} else {
+					wipe()
+					fmt.Fprintf(os.Stderr, "%s\n", err)
+					os.Exit(1)
 				}
+
 				writer = csv.NewWriter(csvfile)
 				if !existed {
 					headers := []string{"link", "lastvalidation", "title", "description", "service", "uploaded", "type", "size", "length", "filecount", "thumbnail", "downloads", "views"}
@@ -326,35 +324,34 @@ func main() {
 				printUsage()
 				fmt.Fprintf(os.Stderr, "%s\n", errors.New("json file name/path not specified"))
 				os.Exit(0)
-			} else {
-				mode = "clean"
-				filename = fixName(args[2], ".json")
-				fmt.Println("Output Mode: CLEAN")
-				fmt.Println("File Name: ", filename)
-				fmt.Println()
-
-				content, err := os.ReadFile(filename)
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "%s\n", err)
-					os.Exit(1)
-				}
-
-				middle := strings.TrimRight(string(content), "\n")
-				middle = strings.TrimRight(middle, ",")
-				middle = strings.ReplaceAll(middle, "{\"link\":\"", "\t\t{\"link\":\"")
-
-				comp := "{\n\t\"content\":[\n" + middle + "\n\t]\n}"
-
-				err = os.WriteFile("clean-"+filename, []byte(comp), 0600)
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "%s\n", err)
-					os.Exit(1)
-				}
-
-				fmt.Println("Finished cleaning", filename)
-				fmt.Println("Cleaned file name: clean-" + filename)
-				os.Exit(0)
 			}
+			mode = "clean"
+			filename = fixName(args[2], ".json")
+			fmt.Println("Output Mode: CLEAN")
+			fmt.Println("File Name: ", filename)
+			fmt.Println()
+
+			content, err := os.ReadFile(filename)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%s\n", err)
+				os.Exit(1)
+			}
+
+			middle := strings.TrimRight(string(content), "\n")
+			middle = strings.TrimRight(middle, ",")
+			middle = strings.ReplaceAll(middle, "{\"link\":\"", "\t\t{\"link\":\"")
+
+			comp := "{\n\t\"content\":[\n" + middle + "\n\t]\n}"
+
+			err = os.WriteFile("clean-"+filename, []byte(comp), 0600)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%s\n", err)
+				os.Exit(1)
+			}
+
+			fmt.Println("Finished cleaning", filename)
+			fmt.Println("Cleaned file name: clean-" + filename)
+			os.Exit(0)
 		default:
 			fmt.Fprintf(os.Stderr, "%s\n", errors.New("unrecognized output mode"))
 			os.Exit(0)
@@ -370,11 +367,6 @@ func main() {
 	sigChannel := make(chan os.Signal, 1)
 	signal.Notify(sigChannel, os.Interrupt)
 
-	defer func() {
-		signal.Stop(sigChannel)
-		cancel()
-	}()
-
 	go func() {
 		select {
 		case <-sigChannel: // graceful
@@ -385,7 +377,13 @@ func main() {
 		os.Exit(2)
 	}()
 
-	err = run(cntx, os.Args)
+	err = run(cntx)
+
+	func() {
+		signal.Stop(sigChannel)
+		cancel()
+	}()
+
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s\n", err)
 		os.Exit(1)
@@ -393,7 +391,7 @@ func main() {
 	os.Exit(0)
 }
 
-func run(cntx context.Context, args []string) error {
+func run(cntx context.Context) error {
 	for {
 		select {
 		case <-cntx.Done():
@@ -415,7 +413,10 @@ func run(cntx context.Context, args []string) error {
 				defer wg.Done()
 				err := worker("https://rentry.co/" + trueRand(5, "abcdefghijklmnopqrstuvwxyz0123456789") + "/raw")
 				if err != nil {
-					swapCheck(err)
+					if err = swapCheck(err); err != nil {
+						fmt.Fprintf(os.Stderr, "%s\n", err)
+						wipe()
+					}
 				}
 			}()
 		}

@@ -120,7 +120,7 @@ func Delegate(res string) ([]models.Entry, error) {
 
 				// Initialize variable to potentially be accessed in the following conditional
 				count := "N/A"
-				fTyp := "N/A"
+				var fTyp string
 				// If the link contains the word "folder", then the mega link type is that of a folder.
 				if strings.Contains(v, "folder") {
 					// Extract file count header
