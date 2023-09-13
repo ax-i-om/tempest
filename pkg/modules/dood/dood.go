@@ -32,6 +32,10 @@ import (
 // Compile the RegEx expression to be used in the identification and extraction of the Bunkr links
 var dLink *regexp.Regexp = regexp.MustCompile("(https|http)://doods.pro/((f/[a-z0-9]{10})|((d/[a-z0-9]{32}|(d/[a-z0-9]{31})|(d/[a-z0-9]{12})))|e/[a-z0-9]{12})")
 
+/*
+
+Cannot read valid dood link body as a 403 is returned upon request. Dood requires the client to have JS enabled. Maybe achievable through headless-browser?
+
 // Compile the RegEx expression for extracting the thumbnail URL
 var rThumb *regexp.Regexp = regexp.MustCompile(`(https|http)://img(.*?).jpg`)
 
@@ -46,6 +50,8 @@ var size *regexp.Regexp = regexp.MustCompile(`(\d+(?:\.\d+)?)\s*([KMGTP]?B)`)
 
 // Compile the RegEx expression for extracting the length
 var length *regexp.Regexp = regexp.MustCompile(`(\d+):(\d+)`)
+
+*/
 
 // Extract returns a slice of all Dood links contained within a string, if any.
 func Extract(res string) ([]string, error) {
@@ -64,24 +70,24 @@ func Convert(res string) string {
 }
 
 // Validate performs a GET request to the Dood URL and uses the response status code to identify its validity
-func Validate(x string) (bool, string, error) {
+func Validate(x string) (bool, error) {
 	// Perform a GET request using the Dood URL
 	res, err := req.GetRes(x)
 	if err != nil {
-		return false, "", err
+		return false, err
 	}
 
 	// Prepare the contents of the response to be read
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		return false, "", err
+		return false, err
 	}
 
 	// Read the response, if the title contains the below specified string, then the Dood link is not online.
 	if strings.Contains(string(body), "<title>Video not found | DoodStream</title>") {
-		return false, string(body), res.Body.Close()
+		return false, res.Body.Close()
 	} else {
-		return true, string(body), res.Body.Close()
+		return true, res.Body.Close()
 	}
 }
 
@@ -101,34 +107,38 @@ func Delegate(res string) ([]models.Entry, error) {
 		// Loop through each Dood link within the slice
 		for _, v := range x {
 			// Call the Validate function in order to check whether or not the link is valid
-			x, contents, err := Validate(v)
+			x, err := Validate(v)
 			if err != nil {
 				// If any error occurs during the validation process, stop the current iteration and immediately begin with the next link within the slice
 				continue
 			}
 			// If x, the bool return by Validate(), is true: output the result to the terminal and append the link to the specified results slice.
 			if x {
-				// Extract title
-				rt := roughTitle.FindString(contents)
-				r1 := strings.ReplaceAll(rt, `<title>`, ``)
-				title := strings.ReplaceAll(r1, `</title>`, ``)
+				/*
 
-				// Extract length
-				flength := length.FindString(contents)
+					// Extract title
+					rt := roughTitle.FindString(contents)
+					r1 := strings.ReplaceAll(rt, `<title>`, ``)
+					title := strings.ReplaceAll(r1, `</title>`, ``)
 
-				// Extract thumbnail URL
-				thumb := rThumb.FindString(contents)
+					// Extract length
+					flength := length.FindString(contents)
 
-				// Extract size
-				fsize := size.FindString(contents)
+					// Extract thumbnail URL
+					thumb := rThumb.FindString(contents)
 
-				// Extract date
-				rdate := roughDate.FindString(contents)
-				d1 := strings.ReplaceAll(rdate, `<div class="uploadate"> <i class="fad fa-calendar-alt mr-1"></i> `, ``)
-				uploaded := strings.ReplaceAll(d1, ` </div>`, ``)
+					// Extract size
+					fsize := size.FindString(contents)
+
+					// Extract date
+					rdate := roughDate.FindString(contents)
+					d1 := strings.ReplaceAll(rdate, `<div class="uploadate"> <i class="fad fa-calendar-alt mr-1"></i> `, ``)
+					uploaded := strings.ReplaceAll(d1, ` </div>`, ``)
+
+				*/
 
 				// Create type Entry and specify the respective values
-				ent := models.Entry{Link: v, Service: "Dood", LastValidation: hdl.Time(), Thumbnail: thumb, Title: title, Type: "File", Size: fsize, Length: flength, Uploaded: uploaded}
+				ent := models.Entry{Link: v, Service: "Dood", LastValidation: hdl.Time(), Type: "File"}
 				// Append the entry to the results slice to be returned to the main runner
 				results = append(results, ent)
 			}

@@ -22,5 +22,5 @@ package hdl
 import "time"
 
 func Time() string {
-	return time.Now().Format("Jan 02, 2006")
+	return time.Now().Format("Jan 02, 2006 at 15:04:05")
 }

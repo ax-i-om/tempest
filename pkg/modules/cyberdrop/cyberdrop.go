@@ -20,6 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package cyberdrop
 
 import (
+	"html"
 	"io"
 	"regexp"
 	"strings"
@@ -156,7 +157,8 @@ func Delegate(res string) ([]models.Entry, error) {
 				}
 
 				// Extract thumbnail URL
-				thumb := rThumb.FindString(contents)
+				preThumb := rThumb.FindString(contents)
+				thumb := html.UnescapeString(preThumb)
 
 				// Create type Entry and specify the respective values
 				ent := models.Entry{Link: v, Service: "Cyberdrop", LastValidation: hdl.Time(), Thumbnail: thumb, Description: desc, Title: title, FileCount: filecount, Size: fsize, Type: "Folder", Uploaded: uploaded}

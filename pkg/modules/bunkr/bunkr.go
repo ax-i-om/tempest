@@ -20,6 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package bunkr
 
 import (
+	"html"
 	"io"
 	"regexp"
 	"strings"
@@ -40,12 +41,6 @@ var size *regexp.Regexp = regexp.MustCompile(`(\d+(?:\.\d+)?)\s*([KMGTP]?B)`)
 
 // Compile the RegEx expression for extracting a thumbnail
 var thumb *regexp.Regexp = regexp.MustCompile(`(https|http)://((i(-pizza|-burger|\d+))|(big-taco-1img)).bunkr.ru/thumbs/(.*?).(png|jpg|jpeg)`)
-
-// Compile the RegEx expression for identifying html entity code
-var ecode *regexp.Regexp = regexp.MustCompile(`&#[0-9]{1,3};`)
-
-// ANOTHER ENT CODE DISCOVERED IN URL: \u0026amp;
-// &amp;quot;content&amp;quot;
 
 // Compile the RegEx expression for dirty extraction of size and file count
 var roughInfo *regexp.Regexp = regexp.MustCompile(`">\d+files \((\d+(?:\.\d+)?)\s*([KMGTP]?B)\)<\/span`)
@@ -158,16 +153,8 @@ func Delegate(res string) ([]models.Entry, error) {
 				fsize := size.FindString(info)
 
 				// Select albumn thumbnail by extracting thumbnail of first image in album
-				thumbnail := ""
-				tpre := thumb.FindString(contents)
-				ec := ecode.FindString(tpre)
-				if ec != "" {
-					if ec == "&#39;" || ec == "&#039;" {
-						thumbnail = strings.ReplaceAll(tpre, ec, ``)
-					}
-				} else {
-					thumbnail = tpre
-				}
+				rt := thumb.FindString(contents)
+				thumbnail := html.UnescapeString(rt)
 
 				// Extract file count from info
 				rStrip := iRight.FindString(info)
