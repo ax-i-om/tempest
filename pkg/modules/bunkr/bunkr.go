@@ -45,6 +45,7 @@ var thumb *regexp.Regexp = regexp.MustCompile(`(https|http)://((i(-pizza|-burger
 var ecode *regexp.Regexp = regexp.MustCompile(`&#[0-9]{1,3};`)
 
 // ANOTHER ENT CODE DISCOVERED IN URL: \u0026amp;
+// &amp;quot;content&amp;quot;
 
 // Compile the RegEx expression for dirty extraction of size and file count
 var roughInfo *regexp.Regexp = regexp.MustCompile(`">\d+files \((\d+(?:\.\d+)?)\s*([KMGTP]?B)\)<\/span`)
