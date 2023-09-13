@@ -21,12 +21,15 @@ package req
 
 import (
 	"net/http"
+	"time"
 )
 
 // GetRes sends a request to a specified URL and returns and *http.Response and error that will be nil if successful.
 func GetRes(link string) (*http.Response, error) {
 	method := "GET"
-	client := &http.Client{}
+	client := &http.Client{
+		Timeout: time.Second * 15, // connection timeout after 15 seconds
+	}
 
 	req, err := http.NewRequest(method, link, nil)
 	if err != nil {

@@ -19,14 +19,15 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package main
 
 import (
+	"context"
 	"encoding/csv"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"math/rand"
 	"os"
+	"os/signal"
 	"strings"
 	"time"
 
@@ -46,6 +47,8 @@ var mode, filename string
 var existed bool
 
 var src = rand.NewSource(time.Now().UnixNano())
+
+var wg models.WaitGroupCount = models.WaitGroupCount{}
 
 const (
 	leIndexBits = 6
@@ -75,15 +78,63 @@ func trueRand(n int, chars string) string {
 	return string(b)
 }
 
+func wipe() {
+	if jsonfile != nil {
+		jsonfile.Close()
+	}
+	if writer != nil {
+		writer.Flush()
+
+	}
+	if csvfile != nil {
+		csvfile.Close()
+	}
+}
+
+func swapCheck(err error) {
+	e := err.Error()
+	if !strings.Contains(e, "Get") && !strings.Contains(e, "EOF") {
+		if strings.Contains(e, "connection reset by peer") || strings.Contains(e, "client connection force closed via ClientConn.Close") || strings.Contains(e, "closed") {
+			// SWAP HERE
+			// Ignore this
+		} else {
+			fmt.Fprintf(os.Stderr, "%s\n", err)
+			wipe()
+			os.Exit(1)
+		}
+	}
+}
+
 func fixName(str, substr string) string {
 	if strings.Contains(str, substr) {
 		return str
 	} else {
-		return strings.ReplaceAll(str, `.`, ``) + substr
+		t := strings.ReplaceAll(str, `.`, ``) + substr
+		return strings.ReplaceAll(t, ` `, ``)
 	}
 }
 
-func runner(renturl string) error {
+func printUsage() {
+	fmt.Println("Usage:")
+	fmt.Println("\tgo run main.go help\t- Prints usage information to the terminal")
+	fmt.Println()
+	fmt.Println("\tgo run main.go console\t- Start Tempest and output results to the terminal")
+	fmt.Println()
+	fmt.Println("\tgo run main.go {json/csv} <filename/filepath>\t- Start Tempest and output results to file in JSON/CSV format")
+	fmt.Println("\t\tJSON Example:\tgo run main.go json results.json")
+	fmt.Println("\t\tCSV Example:\tgo run main.go csv results.csv")
+	fmt.Println()
+	fmt.Println("\tgo run main.go clean <filename/filepath>\t- Clean/Validate JSON file created by Tempest")
+	fmt.Println("\t\tExample:\tgo run main.go clean results.json")
+	fmt.Println("\t\tNOTE:\tReusing a cleaned file for Tempest output will cause further formatting issues")
+	fmt.Println()
+	fmt.Println("\tIn order to gracefully shut down Tempest, press `Ctrl + C` in the terminal **ONCE** and wait until the remaining goroutines finish executing (typically <60s)")
+	fmt.Println("\tIn order to forcefully shut down Tempest press `Ctrl + C` in the terminal **TWICE**")
+	fmt.Println("\tCAUTION: FORCEFULLY SHUTTING DOWN TEMPEST MAY RESULT IN ISSUES INCLUDING, BUT NOT LIMITED TO, DATA LOSS AND FILE CORRUPTION")
+	fmt.Println()
+}
+
+func worker(renturl string) error {
 	// Performs a get request on the randomly generated Rentry.co URL.
 	res, err := req.GetRes(renturl)
 	if err != nil {
@@ -153,24 +204,25 @@ func runner(renturl string) error {
 		results = append(results, vDood...)
 
 		for _, v := range results {
-			if mode == "console" {
+			switch mode {
+			case "console":
 				fmt.Println(v.Service, ": ", v.Link)
-			} else if mode == "json" {
+			case "json":
 				vByte, err := json.Marshal(v)
 				if err != nil {
-					fmt.Println(err)
+					fmt.Fprintf(os.Stderr, "%s\n", err)
 					continue
 				}
-				_, err = jsonfile.WriteString(string(vByte[:]) + ",\n")
+				_, err = jsonfile.WriteString(string(vByte) + ",\n")
 				if err != nil {
-					fmt.Println(err)
+					fmt.Fprintf(os.Stderr, "%s\n", err)
 					continue
 				}
-			} else if mode == "csv" {
+			case "csv":
 				row := []string{v.Link, v.LastValidation, v.Title, v.Description, v.Service, v.Uploaded, v.Type, v.Size, v.Length, v.FileCount, v.Thumbnail, v.Downloads, v.Views}
 				err := writer.Write(row)
 				if err != nil {
-					fmt.Println(err)
+					fmt.Fprintf(os.Stderr, "%s\n", err)
 					continue
 				}
 				writer.Flush()
@@ -195,8 +247,8 @@ func main() {
 	}
 
 	if len(args) < 2 {
-		fmt.Println("Usage")
-		return
+		printUsage()
+		os.Exit(0)
 	} else if len(args) == 2 {
 		if args[1] == "console" {
 			mode = "console"
@@ -204,14 +256,17 @@ func main() {
 			fmt.Println("Output Mode: Console")
 			fmt.Println("")
 		} else {
-			fmt.Println("Please specify a file name.")
-			return
+			printUsage()
+			fmt.Fprintf(os.Stderr, "%s\n", errors.New("file name/path not specified"))
+			os.Exit(0)
 		}
 	} else if len(args) == 3 {
-		if args[1] == "json" {
+		switch args[1] {
+		case "json":
 			if args[2] == "" || len(args[2]) < 1 {
-				fmt.Println("Please specify a file name.")
-				return
+				printUsage()
+				fmt.Fprintf(os.Stderr, "%s\n", errors.New("json file name/path not specified"))
+				os.Exit(0)
 			} else {
 				mode = "json"
 				filename = fixName(args[2], ".json")
@@ -220,31 +275,38 @@ func main() {
 				fmt.Println()
 				jsonfile, err = os.OpenFile(filename, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
 				if err != nil {
-					log.Fatal(err)
+					wipe()
+					fmt.Fprintf(os.Stderr, "%s\n", err)
+					os.Exit(1)
 				}
 
 			}
-		} else if args[1] == "csv" {
+		case "csv":
 			if args[2] == "" || len(args[2]) < 1 {
-				fmt.Println("Please specify a file name.")
-				return
+				printUsage()
+				fmt.Fprintf(os.Stderr, "%s\n", errors.New("json file name/path not specified"))
+				os.Exit(0)
 			} else {
 				mode = "csv"
 				filename = fixName(args[2], ".csv")
 				fmt.Println("Output Mode: CSV")
 				fmt.Println("File Name: ", filename)
 				fmt.Println()
-				csvfile, err = os.OpenFile(filename, os.O_WRONLY|os.O_APPEND, 0644)
+				csvfile, err = os.OpenFile(filename, os.O_WRONLY|os.O_APPEND, 0600)
 				existed = true
 				if err != nil {
 					if errors.Is(err, os.ErrNotExist) {
-						csvfile, err = os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
+						csvfile, err = os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0600)
 						if err != nil {
-							log.Fatal(err)
+							fmt.Fprintf(os.Stderr, "%s\n", err)
+							wipe()
+							os.Exit(1)
 						}
 						existed = false
 					} else {
-						log.Fatal(err)
+						wipe()
+						fmt.Fprintf(os.Stderr, "%s\n", err)
+						os.Exit(1)
 					}
 				}
 				writer = csv.NewWriter(csvfile)
@@ -252,65 +314,110 @@ func main() {
 					headers := []string{"link", "lastvalidation", "title", "description", "service", "uploaded", "type", "size", "length", "filecount", "thumbnail", "downloads", "views"}
 					err := writer.Write(headers)
 					if err != nil {
-						fmt.Println(err)
+						wipe()
+						fmt.Fprintf(os.Stderr, "%s\n", err)
+						os.Exit(1)
 					}
 					writer.Flush()
 				}
 			}
-		} else if args[1] == "clean" {
+		case "clean":
 			if args[2] == "" || len(args[2]) < 1 {
-				fmt.Println("Please specify a file name.")
-				return
+				printUsage()
+				fmt.Fprintf(os.Stderr, "%s\n", errors.New("json file name/path not specified"))
+				os.Exit(0)
 			} else {
 				mode = "clean"
 				filename = fixName(args[2], ".json")
 				fmt.Println("Output Mode: CLEAN")
 				fmt.Println("File Name: ", filename)
 				fmt.Println()
-				// START DOING CLEANING STUFF HERE
-				fmt.Println("Done!")
-				return
+
+				content, err := os.ReadFile(filename)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "%s\n", err)
+					os.Exit(1)
+				}
+
+				middle := strings.TrimRight(string(content), "\n")
+				middle = strings.TrimRight(middle, ",")
+				middle = strings.ReplaceAll(middle, "{\"link\":\"", "\t\t{\"link\":\"")
+
+				comp := "{\n\t\"content\":[\n" + middle + "\n\t]\n}"
+
+				err = os.WriteFile("clean-"+filename, []byte(comp), 0600)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "%s\n", err)
+					os.Exit(1)
+				}
+
+				fmt.Println("Finished cleaning", filename)
+				fmt.Println("Cleaned file name: clean-" + filename)
+				os.Exit(0)
 			}
-		} else {
-			fmt.Println("Please properly specify the mode of output")
-			return
+		default:
+			fmt.Fprintf(os.Stderr, "%s\n", errors.New("unrecognized output mode"))
+			os.Exit(0)
 		}
 	} else {
-		fmt.Println("Something went wrong when trying to start Tempest.\nPlease check your input and internet connection\nand try again.")
-		return
+		fmt.Fprintf(os.Stderr, "%s\n", errors.New("malformed command arguments"))
+		os.Exit(0)
 	}
 
-	if jsonfile != nil {
-		defer jsonfile.Close()
-	}
+	cntx := context.Background()
+	cntx, cancel := context.WithCancel(cntx)
 
-	if csvfile != nil {
-		defer csvfile.Close()
-	}
+	sigChannel := make(chan os.Signal, 1)
+	signal.Notify(sigChannel, os.Interrupt)
 
-	if writer != nil {
-		defer writer.Flush()
-	}
+	defer func() {
+		signal.Stop(sigChannel)
+		cancel()
+	}()
 
+	go func() {
+		select {
+		case <-sigChannel: // graceful
+			cancel()
+		case <-cntx.Done():
+		}
+		<-sigChannel // forceful
+		os.Exit(2)
+	}()
+
+	err = run(cntx, os.Args)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s\n", err)
+		os.Exit(1)
+	}
+	os.Exit(0)
+}
+
+func run(cntx context.Context, args []string) error {
 	for {
-		time.Sleep(1 * time.Millisecond) // Sleeps for 1 millisecond (lol)
-		go func() {
+		select {
+		case <-cntx.Done():
+			fmt.Println("  ->  Attempting to gracefully shutdown Tempest")
+			fmt.Println("\nWaiting for", wg.GetCount(), "GoRoutines to finish execution. Please wait... (~15s)")
 
-			err := runner("https://rentry.co/" + trueRand(5, "abcdefghijklmnopqrstuvwxyz0123456789") + "/raw")
-			if err != nil {
-				e := err.Error()
-				if !strings.Contains(e, "Get") && !strings.Contains(e, "EOF") {
-					if strings.Contains(e, "connection reset by peer") || strings.Contains(e, "client connection force closed via ClientConn.Close") || strings.Contains(e, "closed") {
-						// SWAP HERE
-						// Ignore this
-					} else {
-						fmt.Println(e)
-						os.Exit(1)
-					}
+			wg.Wait()
+			wipe()
+
+			fmt.Println("Tempest was gracefully shut down")
+
+			return nil
+		default:
+			time.Sleep(1 * time.Millisecond) // Sleeps for 1 millisecond (lol)
+
+			wg.Add(1)
+
+			go func() {
+				defer wg.Done()
+				err := worker("https://rentry.co/" + trueRand(5, "abcdefghijklmnopqrstuvwxyz0123456789") + "/raw")
+				if err != nil {
+					swapCheck(err)
 				}
-			}
-
-		}()
-
+			}()
+		}
 	}
 }
