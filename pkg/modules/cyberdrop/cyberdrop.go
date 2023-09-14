@@ -31,37 +31,87 @@ import (
 	"github.com/ax-i-om/tempest/internal/req"
 )
 
-// Compile the RegEx expression to be used in the identification and extraction of the Cyberdrop links
-var cLink *regexp.Regexp = regexp.MustCompile("(https|http)://cyberdrop.me/a/([a-zA-Z0-9]{8})")
-
-// Compile the RegEx expression for extracting the area that contains the title
-var roughTitle *regexp.Regexp = regexp.MustCompile(`<title>(.*?)</title>`)
-
-// Compile the RegEx expression for extracting the area that lies to the right of the actual title
-var rightTitle *regexp.Regexp = regexp.MustCompile(` \[\d+ files(.*?)\| CyberDrop`)
-
-// Compile the RegEx expression for extracting the area that contains the upload date
-var roughUploaded *regexp.Regexp = regexp.MustCompile(`<p class="heading">Uploaded</p>  <p class="title">(.*?)</p>`)
-
-// Compile the RegEx expression for extracting the thumbnail URL
-var rThumb *regexp.Regexp = regexp.MustCompile(`(https|http)://i0.wp.com(.*?).png`)
-
-// Compile the RegEx expression for extracting the area that contains the description (specified by author)
-var roughDesc *regexp.Regexp = regexp.MustCompile(`\[Reg: CLOSED] - (.*?)" />`)
-
-// Compile the RegEx expression for dirty extraction of file count from title
-var rFiles *regexp.Regexp = regexp.MustCompile(`\[(.*?) files ::`)
-
-// Compile the RegEx expression for extraction of digits
-var digits *regexp.Regexp = regexp.MustCompile(`\d+`)
-
-// Size RegEx expression
-var size *regexp.Regexp = regexp.MustCompile(`(\d+(?:\.\d+)?)\s*([KMGTP]?B)`)
+// Compile RegEx expressions for extraction of links/metadata
+var cLink *regexp.Regexp = regexp.MustCompile("(https|http)://cyberdrop.me/a/([a-zA-Z0-9]{8})")                      // Extract Cyberdrop link
+var roughTitle *regexp.Regexp = regexp.MustCompile(`<title>(.*?)</title>`)                                           // Extract title area/node
+var rightTitle *regexp.Regexp = regexp.MustCompile(` \[\d+ files(.*?)\| CyberDrop`)                                  // Extract rightmost area of title
+var roughUploaded *regexp.Regexp = regexp.MustCompile(`<p class="heading">Uploaded</p>  <p class="title">(.*?)</p>`) // Extract date area
+var thumb *regexp.Regexp = regexp.MustCompile(`(https|http)://i0.wp.com(.*?).png`)                                   // Thumbnail extraction
+var roughDesc *regexp.Regexp = regexp.MustCompile(`\[Reg: CLOSED] - (.*?)" />`)                                      // Area that contains description
+var rFiles *regexp.Regexp = regexp.MustCompile(`\[(.*?) files ::`)                                                   // Rough file count extraction
+var digits *regexp.Regexp = regexp.MustCompile(`\d+`)                                                                // Digit extraction
+var size *regexp.Regexp = regexp.MustCompile(`(\d+(?:\.\d+)?)\s*([KMGTP]?B)`)                                        // Size extraction
 
 // Extract returns a slice of all Cyberdrop links contained within a string, if any.
 func Extract(res string) ([]string, error) {
 	// Return all Cyberdrop links found within an http response
 	return cLink.FindAllString(res, -1), nil
+}
+
+// ExtractTitle takes the body response/contents of a Cyberdrop page (raw source/html (formatted as string)) as
+// an argument and returns the album's title as a string.
+func ExtractTitle(doodContents string) string {
+	eTitle := roughTitle.FindString(doodContents)       // Extract rough title
+	eTitle = strings.ReplaceAll(eTitle, `<title>`, ``)  // Strip opening title tag
+	eTitle = strings.ReplaceAll(eTitle, `</title>`, ``) // Strip closing title tag
+	eTitle = strings.ReplaceAll(eTitle, `Album: `, ``)  // Strip unnecessary text
+	stripExtra := rightTitle.FindString(eTitle)         // Identify extra information appended to title
+	return strings.ReplaceAll(eTitle, stripExtra, ``)   // Strip extra information identified via RegEx and return results
+}
+
+// ExtractSize takes the body response/contents of a Cyberdrop page (raw source/html (formatted as string)) as
+// an argument and returns the album's total/cumulative file size as a string.
+func ExtractSize(doodContents string) string {
+	eTitle := roughTitle.FindString(doodContents) // Extract rough title
+	return size.FindString(eTitle)                // Find size information identified via RegEx and return results
+}
+
+// ExtractFileCount takes the body response/contents of a Cyberdrop page (raw source/html (formatted as string)) as
+// an argument and returns the album's file count as a string.
+func ExtractFileCount(doodContents string) string {
+	eTitle := roughTitle.FindString(doodContents) // Extract rough title
+	eCount := rFiles.FindString(eTitle)           // Extract rough file count
+	return digits.FindString(eCount)              // Find file count information identified via RegEx and return results
+}
+
+// ExtractDescription takes the body response/contents of a Cyberdrop page (raw source/html (formatted as string)) and
+// the excludeDefault flag (bool). The exclude default flag will return an empty string in the case that the album
+// creator did not specify a description, rather than Cyberdrop's ~150 character default description. This should be
+// set to true in most cases. If the album creator did specify a description, it will be returned as a string.
+func ExtractDescription(doodContents string, excludeDefault bool) string {
+	eDesc := roughDesc.FindString(doodContents)               // Extract rough description
+	eDesc = strings.ReplaceAll(eDesc, `[Reg: CLOSED] - `, ``) // Strip unnecessary text
+	eDesc = strings.ReplaceAll(eDesc, `" />`, ``)             // Strip unnecessary text
+	// If default description is returned (in the case the album creator did not specify a description)
+	// and the excludeDefault flag is set to true, return an empty string
+	if excludeDefault && strings.Contains(eDesc, "A privacy-focused censorship-resistant file sharing platform free for everyone. Upload files up to 200MB. Keep your uploads safe and secure with us") {
+		return ""
+	}
+	return eDesc // Otherwise, return the description
+}
+
+// ExtractThumbnail takes the body response/contents of a Cyberdrop page (raw source/html (formatted as string)) as
+// an argument. Cyberdrop albums do not have a dedicated thumbnail, so ExtractThumbnail() instead extracts the first
+// image URL it finds, as this can grant more insight if other metadata is misleading/inconclusive. The extracted URL
+// is unescaped to ensure validity and returned in string format.
+func ExtractThumbnail(doodContents string) string {
+	return html.UnescapeString(thumb.FindString(doodContents)) // Find picture via RegEx, and return the unescaped URL
+}
+
+// ExtractUploadDate takes the body response/contents of a Cyberdrop page (raw source/html (formatted as string)) as
+// and a dateFormat string as it's arguments. The dateFormat string will be used to format a time.Time into a more
+// favorable format. The default dateFormat used by tempest is "Jan 02, 2006". It will return a date in string format,
+// which has been formatted in accordance with the specified dateFormat, and an error which will be nil if successful.
+func ExtractUploadDate(doodContents string, dateFormat string) (string, error) {
+	eUdate := roughUploaded.FindString(doodContents)                                              // Extract rough upload date
+	eUdate = strings.ReplaceAll(eUdate, `<p class="heading">Uploaded</p>  <p class="title">`, ``) // Strip tags and attributes
+	eUdate = strings.ReplaceAll(eUdate, `</p>`, ``)                                               // Strip closing paragraph tag
+	eUdate = strings.ReplaceAll(eUdate, `.`, `-`)                                                 // Convert any periods (.) to dashes/hyphens (-)
+	parsed, err := time.Parse("02-01-2006", eUdate)                                               // Convert string to *time.Time
+	if err != nil {
+		return "", err
+	}
+	return parsed.Format(dateFormat), nil // Format the date based on the format specified in dateFormat and return as string
 }
 
 // Validate performs a GET request to the Cyberdrop URL and uses the response status code to identify its validity
@@ -79,7 +129,7 @@ func Validate(x string) (bool, error) {
 	}
 }
 
-// Delegate takes a string as an argument and returns a slice of valid Senvid links found within the response (if any) and an error
+// Delegate takes a string as an argument and returns a slice of valid Senvid links found within the response (if any) or nil, and an error
 func Delegate(res string) ([]models.Entry, error) {
 	// Use Extract() to extract any existing Cyberdrop links from the response
 	x, err := Extract(res)
@@ -119,49 +169,15 @@ func Delegate(res string) ([]models.Entry, error) {
 				contents = strings.ReplaceAll(contents, "\n", ``)
 				contents = strings.ReplaceAll(contents, "\t", ``)
 
-				// Extract title
-				rt := roughTitle.FindString(contents)
-				r1 := strings.ReplaceAll(rt, `<title>`, ``)
-				r2 := strings.ReplaceAll(r1, `</title>`, ``)
-				r3 := strings.ReplaceAll(r2, `Album: `, ``)
-				tStrip := rightTitle.FindString(r3)
-				title := strings.ReplaceAll(r3, tStrip, ``)
-
-				// Extract size
-				fsize := size.FindString(r3)
-
-				// Extract file count
-				rf := rFiles.FindString(r3)
-				filecount := digits.FindString(rf)
-
-				// Extract description
-				rd := roughDesc.FindString(contents)
-				d1 := strings.ReplaceAll(rd, `[Reg: CLOSED] - `, ``)
-				desc := strings.ReplaceAll(d1, `" />`, ``)
-				if strings.Contains(desc, "A privacy-focused censorship-resistant file sharing platform free for everyone. Upload files up to 200MB. Keep your uploads safe and secure with us") {
-					desc = ""
-				}
-
-				uploaded := ""
-
-				// Extract upload date
-				ru := roughUploaded.FindString(contents)
-				u1 := strings.ReplaceAll(ru, `<p class="heading">Uploaded</p>  <p class="title">`, ``)
-				u2 := strings.ReplaceAll(u1, `</p>`, ``)
-				u3 := strings.ReplaceAll(u2, `.`, `-`)
-				u4, err := time.Parse("02-01-2006", u3)
-				if err != nil {
-					uploaded = u3
-				} else {
-					uploaded = u4.Format("Jan 02, 2006")
-				}
-
-				// Extract thumbnail URL
-				preThumb := rThumb.FindString(contents)
-				thumb := html.UnescapeString(preThumb)
+				aTitle := ExtractTitle(contents)                              // Extract title
+				aSize := ExtractSize(contents)                                // Extract size
+				aCount := ExtractFileCount(contents)                          // Extract file count
+				aDescription := ExtractDescription(contents, true)            // Extract description
+				aThumbnail := ExtractThumbnail(contents)                      // Extract thumbnail
+				aUploadDate, _ := ExtractUploadDate(contents, "Jan 02, 2006") // Extract upload date
 
 				// Create type Entry and specify the respective values
-				ent := models.Entry{Link: v, Service: "Cyberdrop", LastValidation: hdl.Time(), Thumbnail: thumb, Description: desc, Title: title, FileCount: filecount, Size: fsize, Type: "Folder", Uploaded: uploaded}
+				ent := models.Entry{Link: v, Service: "Cyberdrop", LastValidation: hdl.Time(), Thumbnail: aThumbnail, Description: aDescription, Title: aTitle, FileCount: aCount, Size: aSize, Type: "Folder", Uploaded: aUploadDate}
 				// Append the entry to the results slice to be returned to the main runner
 				results = append(results, ent)
 			}

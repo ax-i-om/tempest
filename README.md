@@ -3,7 +3,7 @@
     <h1 align="center">Tempest</h1>
   <p align="center">
     <a href="https://goreportcard.com/report/github.com/ax-i-om/tempest"><img src="https://goreportcard.com/badge/github.com/ax-i-om/tempest" alt="Go Report Card"></a>
-    <a><img src="https://img.shields.io/badge/version-0.2.1-blue.svg" alt="v0.2.1"></a><br>
+    <a><img src="https://img.shields.io/badge/version-0.3.1-blue.svg" alt="v0.3.1"></a><br>
     Leveraging paste sites as a medium for discovery<br>
 </a>
   </p><br>
@@ -62,15 +62,15 @@ This will be the quickest way of converting the JSON file formatting into one th
 
 ### Cloud Storage / File Sharing Platform Modules
 
-| Module    | Expression                                                                                    |   Validation Method   | Domain Variations? | Status |
-| :-------: | --------------------------------------------------------------------------------------------- | :------: | -------- | :----: |
-| Bunkr      | (https\|http)://bunkrr.su/a/([a-zA-Z0-9]{8}) |  Status Code  | Yes       | Functioning | 
-| Cyberdrop      | (https\|http)://cyberdrop.me/a/([a-zA-Z0-9]{8}) |  Status Code  | No       | Functioning | 
-| Dood | (https\|http)://doods.pro/((f/[a-z0-9]{10})\|((d/[a-z0-9]{32}\|(d/[a-z0-9]{31})\|(d/[a-z0-9]{12})))\|e/[a-z0-9]{12}) | Body Contents | Yes | Functioning | 
-| Gofile      | (https\|http)://gofile.io/d/([a-zA-Z0-9]{6}) |  Body Contents  | No       | Functioning | 
-| Google Drive | (https\|http)://drive.google.com/(folder\|file\|drive)/(d\|folders)/(1[a-zA-Z0-9_-]{32}\|0[a-zA-Z0-9_-]{27}) | Status Code | No | Functioning |
-| Mega      | (https\|http)://mega.nz/(folder\|file)/([a-zA-Z0-9]{0,8})#([a-zA-Z0-9_-]{43}\|[a-zA-Z0-9_-]{22}) |  Body Contents  | No       | Functioning | 
-| Sendvid | (https\|http)://sendvid.com/([a-z0-9]{8}) | Status code | No | Functioning
+| Module        | Status       |
+| :-----------: | -------------|
+| Bunkr         | Functioning  |
+| Cyberdrop     | Functioning  |
+| Dood          | Functioning  |
+| Gofile        | Functioning  |
+| Google Drive  | Functioning  |
+| Mega          | Functioning  |
+| Sendvid       | Functioning  |
 
 ### Entry Format
 
