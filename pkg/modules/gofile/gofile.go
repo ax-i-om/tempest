@@ -20,7 +20,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package gofile
 
 import (
-	"fmt"
 	"io"
 	"regexp"
 	"strconv"
@@ -121,20 +120,12 @@ func Delegate(res string) ([]models.Entry, error) {
 				// Create type Entry and specify the respective values
 				ent := models.Entry{Link: v, Service: "GoFile", LastValidation: hdl.Time()}
 
-				fmt.Println(title)
-
 				if strings.Contains(title, "Folder") {
 					ent.Title = strings.ReplaceAll(title, `Folder `, ``)
 					ent.FileCount = ExtractFileCount(contents)
-					fmt.Println("FOLDER SELECTED")
-					fmt.Println("file count:", ent.FileCount)
-					fmt.Println("download count:", ent.Downloads)
 					ent.Type = "Folder"
 				} else {
 					ent.Downloads = ExtractDownloadCount(contents)
-					fmt.Println("FILE SELECTED")
-					fmt.Println("file count:", ent.FileCount)
-					fmt.Println("download count:", ent.Downloads)
 					ent.Type = "File"
 				}
 
