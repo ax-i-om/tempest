@@ -41,6 +41,14 @@ func Extract(res string) ([]string, error) {
 	return gLink.FindAllString(res, -1), nil
 }
 
+func ExtractTitle(googledriveContents string) string {
+	// Extract title
+	eTitle := roughTitle.FindString(googledriveContents)
+	eTitle = strings.ReplaceAll(eTitle, `<title>`, ``)
+	eTitle = strings.ReplaceAll(eTitle, `</title>`, ``)
+	return strings.ReplaceAll(eTitle, ` - Google Drive`, ``)
+}
+
 // Validate performs a GET request to the Google Drive URL and uses the response status code to identify its validity
 func Validate(x string) (bool, error) {
 	// Perform a GET request using the Google Drive URL
@@ -92,22 +100,18 @@ func Delegate(res string) ([]models.Entry, error) {
 				// Convert read results to a string
 				contents := string(body)
 
-				// Extract title
-				rt := roughTitle.FindString(contents)
-				t1 := strings.ReplaceAll(rt, `<title>`, ``)
-				t2 := strings.ReplaceAll(t1, `</title>`, ``)
-				title := strings.ReplaceAll(t2, ` - Google Drive`, ``)
+				aTitle := ExtractTitle(contents)
 
-				fTyp := ""
+				var aType string
 
 				if strings.Contains(v, `/file/`) {
-					fTyp = "File"
+					aType = "File"
 				} else {
-					fTyp = "Folder"
+					aType = "Folder"
 				}
 
 				// Create type Entry and specify the respective values
-				ent := models.Entry{Link: v, Service: "Google Drive", LastValidation: hdl.Time(), Type: fTyp, Title: title}
+				ent := models.Entry{Link: v, Service: "Google Drive", LastValidation: hdl.Time(), Type: aType, Title: aTitle}
 				// Append the entry to the results slice to be returned to the main runner
 				results = append(results, ent)
 			}

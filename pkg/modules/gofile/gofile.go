@@ -22,6 +22,7 @@ package gofile
 import (
 	"io"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/ax-i-om/tempest/internal/hdl"
@@ -29,19 +30,46 @@ import (
 	"github.com/ax-i-om/tempest/internal/req"
 )
 
-// Compile the RegEx expression to be used in the identification and extraction of the Gofile links
-var gLink *regexp.Regexp = regexp.MustCompile("(https|http)://gofile.io/d/([a-zA-Z0-9]{6})")
-
-// Compile the RegEx expression for extracting the area that contains the title
-var roughTitle *regexp.Regexp = regexp.MustCompile(`<title>(.*?)</title>`)
-
-// Compile the RegEx expression for extracting the area that contains the description (file count if folder, download count if file)
-var roughDesc *regexp.Regexp = regexp.MustCompile(`<meta name='description' content='(.*?)' />`)
+// Compile RegEx expressions for extraction of links/metadata
+var gLink *regexp.Regexp = regexp.MustCompile("(https|http)://gofile.io/d/([a-zA-Z0-9]{6})")     // Extract Gofile link
+var roughTitle *regexp.Regexp = regexp.MustCompile(`<title>(.*?)</title>`)                       // Extract title
+var roughDesc *regexp.Regexp = regexp.MustCompile(`<meta name='description' content='(.*?)' />`) // Extract file count if folder, download count if file
 
 // Extract returns a slice of all Gofile links contained within a string, if any.
 func Extract(res string) ([]string, error) {
 	// Return all Gofile links found within an http response
 	return gLink.FindAllString(res, -1), nil
+}
+
+func ExtractTitle(gofileContents string) string {
+	rt := roughTitle.FindString(gofileContents)
+	r1 := strings.ReplaceAll(rt, `<title>`, ``)
+	return strings.ReplaceAll(r1, `</title>`, ``)
+}
+
+func ExtractFileCount(title string) int {
+	eDesc := roughDesc.FindString(title)
+	eDesc = strings.ReplaceAll(eDesc, `<meta name='description' content='`, ``)
+	eDesc = strings.ReplaceAll(eDesc, `' />`, ``)
+	eCount := strings.ReplaceAll(eDesc, ` files`, ``)
+	eCount = strings.ReplaceAll(eCount, ",", "")
+	eCount = strings.ReplaceAll(eCount, ".", "")
+	fileCount, err := strconv.Atoi(eCount)
+	if err != nil {
+		return -1
+	}
+	return fileCount
+}
+
+func ExtractDownloadCount(title string) int {
+	eDesc := roughDesc.FindString(title)
+	eDesc = strings.ReplaceAll(eDesc, `<meta name='description' content='`, ``)
+	eDesc = strings.ReplaceAll(eDesc, `' />`, ``)
+	downloadCount, err := strconv.Atoi(strings.ReplaceAll(eDesc, ` downloads`, ``))
+	if err != nil {
+		return -1
+	}
+	return downloadCount
 }
 
 // Validate takes a Gofile link/URL and checks certain metadata patterns to identify whether or not the link is valid/online.
@@ -87,30 +115,20 @@ func Delegate(res string) ([]models.Entry, error) {
 			}
 			// If x, the bool return by Validate(), is true: output the result to the terminal and append the link to the specified results slice.
 			if x {
-				// Extract title
-				rt := roughTitle.FindString(contents)
-				r1 := strings.ReplaceAll(rt, `<title>`, ``)
-				title := strings.ReplaceAll(r1, `</title>`, ``)
+				title := ExtractTitle(contents) // Extract title
 
-				filecount := ""
-				downloads := ""
-				fTyp := ""
-
-				rd := roughDesc.FindString(contents)
-				d1 := strings.ReplaceAll(rd, `<meta name='description' content='`, ``)
-				d2 := strings.ReplaceAll(d1, `' />`, ``)
+				// Create type Entry and specify the respective values
+				ent := models.Entry{Link: v, Service: "GoFile", LastValidation: hdl.Time(), Title: title}
 
 				if strings.Contains(title, "Folder") {
 					title = strings.ReplaceAll(title, `Folder `, ``)
-					filecount = strings.ReplaceAll(d2, ` files`, ``)
-					fTyp = "Folder"
+					ent.FileCount = ExtractFileCount(title)
+					ent.Type = "Folder"
 				} else {
-					downloads = strings.ReplaceAll(d2, ` downloads`, ``)
-					fTyp = "File"
+					ent.Downloads = ExtractDownloadCount(title)
+					ent.Type = "File"
 				}
 
-				// Create type Entry and specify the respective values
-				ent := models.Entry{Link: v, Service: "GoFile", LastValidation: hdl.Time(), Title: title, FileCount: filecount, Downloads: downloads, Type: fTyp}
 				// Append the entry to the results slice to be returned to the main runner
 				results = append(results, ent)
 			}

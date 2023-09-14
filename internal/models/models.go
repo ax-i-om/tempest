@@ -37,11 +37,11 @@ type Entry struct {
 	Type      string `json:"type"`
 	Size      string `json:"size"`
 	Length    string `json:"length"`
-	FileCount string `json:"filecount"`
+	FileCount int    `json:"filecount"`
 
 	Thumbnail string `json:"thumbnail"`
-	Downloads string `json:"downloads"`
-	Views     string `json:"views"`
+	Downloads int    `json:"downloads"`
+	Views     int    `json:"views"`
 }
 
 // WaitGroupCount represents a countable sync.WaitGroup

@@ -22,6 +22,7 @@ package mega
 import (
 	"io"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/ax-i-om/tempest/internal/hdl"
@@ -119,25 +120,28 @@ func Delegate(res string) ([]models.Entry, error) {
 				contents := string(body)
 
 				// Initialize variable to potentially be accessed in the following conditional
-				count := "N/A"
-				var fTyp string
+				var count int
+				var aType string
 				// If the link contains the word "folder", then the mega link type is that of a folder.
 				if strings.Contains(v, "folder") {
 					// Extract file count header
 					fl := filesLine.FindString(contents)
 					// Extract number from header
-					count = digits.FindString(fl)
+					count, err = strconv.Atoi(digits.FindString(fl))
+					if err != nil {
+						count = -1
+					}
 					// Set fTyp to Folder
-					fTyp = "Folder"
+					aType = "Folder"
 				} else { // (handle file link here)
-					fTyp = "File"
+					aType = "File"
 				}
 
 				// Extract the string that specifies the cumulative size of the mega folder contents or the size of a mega file
 				ss := size.FindString(contents)
 
 				// Create type Entry and specify the respective values
-				ent := models.Entry{Link: v, Service: "Mega", Type: fTyp, Size: ss, FileCount: count, LastValidation: hdl.Time()}
+				ent := models.Entry{Link: v, Service: "Mega", Type: aType, Size: ss, FileCount: count, LastValidation: hdl.Time()}
 				// Append the entry to the results slice to be returned to the main runner
 				results = append(results, ent)
 			}

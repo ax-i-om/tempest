@@ -104,7 +104,7 @@ func write(results []models.Entry) {
 			}
 		case "csv": // If mode is set to csv:
 			// Create a CSV record based on the current iteration's accompanying entry (v)
-			row := []string{v.Link, v.LastValidation, v.Title, v.Description, v.Service, v.Uploaded, v.Type, v.Size, v.Length, v.FileCount, v.Thumbnail, v.Downloads, v.Views}
+			row := []string{v.Link, v.LastValidation, v.Title, v.Description, v.Service, v.Uploaded, v.Type, v.Size, v.Length, fmt.Sprint(v.FileCount), v.Thumbnail, fmt.Sprint(v.Downloads), fmt.Sprint(v.Views)}
 			// Write the record
 			err := writer.Write(row)
 			if err != nil {

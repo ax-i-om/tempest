@@ -23,6 +23,7 @@ import (
 	"html"
 	"io"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -44,19 +45,18 @@ var size *regexp.Regexp = regexp.MustCompile(`(\d+(?:\.\d+)?)\s*([KMGTP]?B)`)   
 
 // Extract returns a slice of all Cyberdrop links contained within a string, if any.
 func Extract(res string) ([]string, error) {
-	// Return all Cyberdrop links found within an http response
-	return cLink.FindAllString(res, -1), nil
+	return cLink.FindAllString(res, -1), nil // Return all Cyberdrop links found within an http response
 }
 
 // ExtractTitle takes the body response/contents of a Cyberdrop page (raw source/html (formatted as string)) as
 // an argument and returns the album's title as a string.
 func ExtractTitle(doodContents string) string {
-	eTitle := roughTitle.FindString(doodContents)       // Extract rough title
-	eTitle = strings.ReplaceAll(eTitle, `<title>`, ``)  // Strip opening title tag
-	eTitle = strings.ReplaceAll(eTitle, `</title>`, ``) // Strip closing title tag
-	eTitle = strings.ReplaceAll(eTitle, `Album: `, ``)  // Strip unnecessary text
-	stripExtra := rightTitle.FindString(eTitle)         // Identify extra information appended to title
-	return strings.ReplaceAll(eTitle, stripExtra, ``)   // Strip extra information identified via RegEx and return results
+	eTitle := roughTitle.FindString(doodContents)                          // Extract rough title
+	eTitle = strings.ReplaceAll(eTitle, `<title>`, ``)                     // Strip opening title tag
+	eTitle = strings.ReplaceAll(eTitle, `</title>`, ``)                    // Strip closing title tag
+	eTitle = strings.ReplaceAll(eTitle, `Album: `, ``)                     // Strip unnecessary text
+	stripExtra := rightTitle.FindString(eTitle)                            // Identify extra information appended to title
+	return html.UnescapeString(strings.ReplaceAll(eTitle, stripExtra, ``)) // Strip extra information identified via RegEx and unescape
 }
 
 // ExtractSize takes the body response/contents of a Cyberdrop page (raw source/html (formatted as string)) as
@@ -67,11 +67,15 @@ func ExtractSize(doodContents string) string {
 }
 
 // ExtractFileCount takes the body response/contents of a Cyberdrop page (raw source/html (formatted as string)) as
-// an argument and returns the album's file count as a string.
-func ExtractFileCount(doodContents string) string {
-	eTitle := roughTitle.FindString(doodContents) // Extract rough title
-	eCount := rFiles.FindString(eTitle)           // Extract rough file count
-	return digits.FindString(eCount)              // Find file count information identified via RegEx and return results
+// an argument and returns the album's file count as an integer. It will return -1 in the case of a syntax error.
+func ExtractFileCount(doodContents string) int {
+	eTitle := roughTitle.FindString(doodContents)   // Extract rough title
+	eCount := rFiles.FindString(eTitle)             // Extract rough file count
+	c, e := strconv.Atoi(digits.FindString(eCount)) // Find file count information identified via RegEx and convert to int
+	if e != nil {                                   // Error (likely syntax) returns a -1 instead
+		c = -1
+	}
+	return c
 }
 
 // ExtractDescription takes the body response/contents of a Cyberdrop page (raw source/html (formatted as string)) and
@@ -87,7 +91,7 @@ func ExtractDescription(doodContents string, excludeDefault bool) string {
 	if excludeDefault && strings.Contains(eDesc, "A privacy-focused censorship-resistant file sharing platform free for everyone. Upload files up to 200MB. Keep your uploads safe and secure with us") {
 		return ""
 	}
-	return eDesc // Otherwise, return the description
+	return html.UnescapeString(eDesc) // Otherwise, return the unescaped description
 }
 
 // ExtractThumbnail takes the body response/contents of a Cyberdrop page (raw source/html (formatted as string)) as
@@ -129,7 +133,7 @@ func Validate(x string) (bool, error) {
 	}
 }
 
-// Delegate takes a string as an argument and returns a slice of valid Senvid links found within the response (if any) or nil, and an error
+// Delegate takes a string as an argument and returns a slice of valid Cyberdrop links found within the response (if any) or nil, and an error
 func Delegate(res string) ([]models.Entry, error) {
 	// Use Extract() to extract any existing Cyberdrop links from the response
 	x, err := Extract(res)
@@ -150,7 +154,7 @@ func Delegate(res string) ([]models.Entry, error) {
 			}
 			// If x, the bool return by Validate(), is true: output the result to the terminal and append the link to the specified results slice.
 			if x {
-				// Get body contents of the sendvid link
+				// Get body contents of the cyberdrop link
 				res, err := req.GetRes(v)
 				if err != nil {
 					continue

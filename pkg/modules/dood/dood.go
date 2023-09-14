@@ -30,7 +30,7 @@ import (
 )
 
 // Compile the RegEx expression to be used in the identification and extraction of the Bunkr links
-var dLink *regexp.Regexp = regexp.MustCompile("(https|http)://(doods|dood).(la|pm|sh|to|ws|one|watch|pro)/((f/[a-z0-9]{10})|((d/[a-z0-9]{32}|(d/[a-z0-9]{31})|(d/[a-z0-9]{12})))|e/[a-z0-9]{12})")
+var dLink *regexp.Regexp = regexp.MustCompile("(https|http)://(doods|dood).(la|yt|pm|sh|to|ws|one|watch|pro)/((f/[a-z0-9]{10})|((d/[a-z0-9]{32}|(d/[a-z0-9]{31})|(d/[a-z0-9]{12})))|e/[a-z0-9]{12})")
 
 // Extract returns a slice of all Dood links contained within a string, if any.
 func Extract(res string) ([]string, error) {

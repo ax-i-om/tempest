@@ -3,7 +3,7 @@
     <h1 align="center">Tempest</h1>
   <p align="center">
     <a href="https://goreportcard.com/report/github.com/ax-i-om/tempest"><img src="https://goreportcard.com/badge/github.com/ax-i-om/tempest" alt="Go Report Card"></a>
-    <a><img src="https://img.shields.io/badge/version-0.3.1-blue.svg" alt="v0.3.1"></a><br>
+    <a><img src="https://img.shields.io/badge/version-0.3.2-blue.svg" alt="v0.3.2"></a><br>
     Leveraging paste sites as a medium for discovery<br>
 </a>
   </p><br>

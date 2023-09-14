@@ -20,8 +20,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package sendvid
 
 import (
+	"html"
 	"io"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/ax-i-om/tempest/internal/hdl"
@@ -45,6 +47,26 @@ var roughTitle *regexp.Regexp = regexp.MustCompile(`<title>(.*?)</title>`)
 func Extract(res string) ([]string, error) {
 	// Return all Sendvid links found within an http response
 	return sLink.FindAllString(res, -1), nil
+}
+
+func ExtractTitle(sendvidContents string) string {
+	title := roughTitle.FindString(sendvidContents)
+	title = strings.ReplaceAll(title, `<title>`, ``)
+	return strings.ReplaceAll(title, `</title>`, ``)
+}
+
+func ExtractThumbnail(sendvidContents string) string {
+	return html.UnescapeString(rThumb.FindString(sendvidContents))
+}
+
+func ExtractViewCount(sendvidContents string) int {
+	eViews := roughViews.FindString(sendvidContents)
+	eViews = strings.ReplaceAll(eViews, `<p class="hits"><i class="icon-icn-view"></i>`, ``)
+	viewcount, err := strconv.Atoi(strings.ReplaceAll(eViews, `</p>`, ``))
+	if err != nil {
+		return -1
+	}
+	return viewcount
 }
 
 // Validate performs a GET request to the Sendvid URL and uses the response status code to identify its validity
@@ -98,21 +120,12 @@ func Delegate(res string) ([]models.Entry, error) {
 				// Convert read results to a string
 				contents := string(body)
 
-				// Extract title
-				rt := roughTitle.FindString(contents)
-				r1 := strings.ReplaceAll(rt, `<title>`, ``)
-				title := strings.ReplaceAll(r1, `</title>`, ``)
-
-				// Extract thumbnail URL
-				thumb := rThumb.FindString(contents)
-
-				// Extract views
-				rv := roughViews.FindString(contents)
-				v1 := strings.ReplaceAll(rv, `<p class="hits"><i class="icon-icn-view"></i>`, ``)
-				views := strings.ReplaceAll(v1, `</p>`, ``)
+				aTitle := ExtractTitle(contents)
+				aThumbnail := ExtractThumbnail(contents)
+				aViewCount := ExtractViewCount(contents)
 
 				// Create type Entry and specify the respective values
-				ent := models.Entry{Link: v, Service: "Sendvid", LastValidation: hdl.Time(), Thumbnail: thumb, Views: views, Title: title, Type: "File"}
+				ent := models.Entry{Link: v, Service: "Sendvid", LastValidation: hdl.Time(), Thumbnail: aThumbnail, Views: aViewCount, Title: aTitle, Type: "File"}
 				// Append the entry to the results slice to be returned to the main runner
 				results = append(results, ent)
 			}

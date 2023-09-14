@@ -23,6 +23,7 @@ import (
 	"html"
 	"io"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/ax-i-om/tempest/internal/hdl"
@@ -30,34 +31,22 @@ import (
 	"github.com/ax-i-om/tempest/internal/req"
 )
 
-// Compile the RegEx expression to be used in the identification and extraction of the Bunkr links
-var bLink *regexp.Regexp = regexp.MustCompile(`(https|http)://bunkrr.su/a/([a-zA-Z0-9]{8})`)
-
-// Compile the RegEx expression for extracting the area that contains the title
-var roughTitle *regexp.Regexp = regexp.MustCompile(`<title>(.*?)</title>`)
-
-// Size RegEx expression
-var size *regexp.Regexp = regexp.MustCompile(`(\d+(?:\.\d+)?)\s*([KMGTP]?B)`)
-
-// Compile the RegEx expression for extracting a thumbnail
-var thumb *regexp.Regexp = regexp.MustCompile(`(https|http)://((i(-pizza|-burger|\d+))|(big-taco-1img)).bunkr.ru/thumbs/(.*?).(png|jpg|jpeg)`)
-
-// Compile the RegEx expression for dirty extraction of size and file count
-var roughInfo *regexp.Regexp = regexp.MustCompile(`">\d+files \((\d+(?:\.\d+)?)\s*([KMGTP]?B)\)<\/span`)
-
-// Compile the RegEx expression for stripping right side of info
-var iRight *regexp.Regexp = regexp.MustCompile(`files \((\d+(?:\.\d+)?)\s*([KMGTP]?B)\)<\/span`)
-
-// Compile the RegEx expression for extraction of digits
-var digits *regexp.Regexp = regexp.MustCompile(`\d+`)
+// Compile RegEx expressions for extraction of links/metadata
+var bLink *regexp.Regexp = regexp.MustCompile(`(https|http)://bunkrr.su/a/([a-zA-Z0-9]{8})`)                                                   // Bunkr links
+var roughTitle *regexp.Regexp = regexp.MustCompile(`<title>(.*?)</title>`)                                                                     // Rough title
+var size *regexp.Regexp = regexp.MustCompile(`(\d+(?:\.\d+)?)\s*([KMGTP]?B)`)                                                                  // Size
+var thumb *regexp.Regexp = regexp.MustCompile(`(https|http)://((i(-pizza|-burger|\d+))|(big-taco-1img)).bunkr.ru/thumbs/(.*?).(png|jpg|jpeg)`) // Thumbnail
+var roughInfo *regexp.Regexp = regexp.MustCompile(`">\d+files \((\d+(?:\.\d+)?)\s*([KMGTP]?B)\)<\/span`)                                       // Rough info
+var iRight *regexp.Regexp = regexp.MustCompile(`files \((\d+(?:\.\d+)?)\s*([KMGTP]?B)\)<\/span`)                                               // Right side info
+var digits *regexp.Regexp = regexp.MustCompile(`\d+`)                                                                                          // Digits
 
 // Extract returns a slice of all Bunkr links contained within a string, if any.
 func Extract(res string) ([]string, error) {
-	// Return all Bunkr links found within an http response
-	return bLink.FindAllString(res, -1), nil
+	return bLink.FindAllString(res, -1), nil // Return all Bunkr links found within an http response
 }
 
-// Convert takes a slice of bunkr links that use varying domains and converts them to an active domain that can be used.
+// Convert takes a bunkr link in string format as an argument and converts the domain to one
+// that is currently active (bunkrr.su right now). Result returned in string format
 func Convert(res string) string {
 	post := strings.ReplaceAll(res, "bunkr.is", "bunkrr.su")
 	post = strings.ReplaceAll(post, "bunkr.ru", "bunkrr.su")
@@ -66,7 +55,69 @@ func Convert(res string) string {
 	return post
 }
 
+// ExtractTitle takes the body response/contents of a Bunkr page (raw source/html (formatted as string)) as
+// an argument and returns the album's title as a string.
+func ExtractTitle(bunkrContents string) string {
+	eTitle := roughTitle.FindString(bunkrContents)      // Extract rough title via RegEx
+	eTitle = strings.ReplaceAll(eTitle, `<title>`, ``)  // Strip opening tag
+	eTitle = strings.ReplaceAll(eTitle, `</title>`, ``) // Strip closing tag
+	return strings.ReplaceAll(eTitle, ` | Bunkr`, ``)   // Strip unneccesary text
+}
+
+// ExtractSize takes the body response/contents of a Bunkr page (raw source/html (formatted as string)) as
+// an argument and returns the album's total/cumulative file size as a string.
+func ExtractSize(bunkrContents string) string {
+	return size.FindString(roughInfo.FindString(bunkrContents)) // Find size information within info via RegEx
+}
+
+// ExtractThumbnail takes the body response/contents of a Bunkr page (raw source/html (formatted as string)) as
+// an argument. Bunkr albums do not have a dedicated thumbnail, so ExtractThumbnail() instead extracts the first
+// image URL it finds, as this can grant more insight if other metadata is misleading/inconclusive. The extracted URL
+// is unescaped to ensure validity and returned in string format.
+func ExtractThumbnail(bunkrContents string) string {
+	return html.UnescapeString(thumb.FindString(bunkrContents)) // Find picture via RegEx, and return the unescaped URL
+}
+
+// ExtractFileCount takes the body response/contents of a Bunkr page (raw source/html (formatted as string)) as
+// an argument and returns the album's file count as an integer. It will return -1 in the case of a syntax error.
+func ExtractFileCount(bunkrContents string) int {
+	eRough := roughInfo.FindString(bunkrContents)   // Extract rough info
+	eStrip := iRight.FindString(eRough)             // Find right side of string via RegEx
+	eRough = strings.Replace(eRough, eStrip, ``, 1) // Strip right side of string
+	eRough = strings.ReplaceAll(eRough, `">`, ``)   // Strip remnants of html
+	c, e := strconv.Atoi(digits.FindString(eRough)) // Extract digits via RegEx and convert to int
+	if e != nil {                                   // Error (likely syntax) returns a -1 instead
+		c = -1
+	}
+	return c
+}
+
+// ExtractViewCount uses the Bunkr API (https://slut.bunkr.ru/slutsCount?pageUrl=${pageUrl}) to get view count. It
+// takes a bunkr album link as an argument (in string format) and returns a string containing the view count,
+// alongside an error. The error will be nil if everything is successful. If a failure occurs, -1 will be returned.
+func ExtractViewCount(albumUrl string) (int, error) {
+	// Get body contents of the bunkr link
+	res, err := req.GetRes(`https://slut.bunkr.ru/slutsCount?pageUrl=` + albumUrl)
+	if err != nil {
+		return -1, err
+	}
+
+	// Read results of the *http.Response body
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		return -1, err
+	}
+
+	views, err := strconv.Atoi(digits.FindString(string(body)))
+	if err != nil {
+		return -1, err
+	}
+
+	return views, nil
+}
+
 // Validate performs a GET request to the Bunkr URL and uses the response status code to identify its validity
+// If the link is valid, it will return true. If not, it will return false. Validate also returns an error.
 func Validate(x string) (bool, error) {
 	// Perform a GET request using the Bunkr URL
 	res, err := req.GetRes(x)
@@ -81,24 +132,7 @@ func Validate(x string) (bool, error) {
 	}
 }
 
-// FetchViews uses the Bunkr API (https://slut.bunkr.ru/slutsCount?pageUrl=${pageUrl}) to get view count
-func FetchViews(albumUrl string) (string, error) {
-	// Get body contents of the sendvid link
-	res, err := req.GetRes(`https://slut.bunkr.ru/slutsCount?pageUrl=` + albumUrl)
-	if err != nil {
-		return "", err
-	}
-
-	// Read results of the *http.Response body
-	body, err := io.ReadAll(res.Body)
-	if err != nil {
-		return "", err
-	}
-
-	return digits.FindString(string(body)), nil
-}
-
-// Delegate takes a string as an argument and returns a slice of valid Senvid links found within the response (if any) and an error
+// Delegate takes a string as an argument and returns a slice of valid Bunkr links found within the response (if any) or nil, and an error
 func Delegate(res string) ([]models.Entry, error) {
 	// Use Convert() to convert all bunkr link domains to bunkrr.su (the currently active one)
 	c := Convert(res)
@@ -121,7 +155,7 @@ func Delegate(res string) ([]models.Entry, error) {
 			}
 			// If x, the bool return by Validate(), is true: output the result to the terminal and append the link to the specified results slice.
 			if x {
-				// Get body contents of the sendvid link
+				// Get body contents of the bunkr link
 				res, err := req.GetRes(v)
 				if err != nil {
 					continue
@@ -140,32 +174,14 @@ func Delegate(res string) ([]models.Entry, error) {
 				contents = strings.ReplaceAll(contents, "\n", ``)
 				contents = strings.ReplaceAll(contents, "\t", ``)
 
-				// Extract title
-				title := roughTitle.FindString(contents)
-				title = strings.ReplaceAll(title, `<title>`, ``)
-				title = strings.ReplaceAll(title, `</title>`, ``)
-				title = strings.ReplaceAll(title, ` | Bunkr`, ``)
-
-				// Extract info
-				info := roughInfo.FindString(contents)
-
-				// Extract size from info
-				fsize := size.FindString(info)
-
-				// Select albumn thumbnail by extracting thumbnail of first image in album
-				rt := thumb.FindString(contents)
-				thumbnail := html.UnescapeString(rt)
-
-				// Extract file count from info
-				rStrip := iRight.FindString(info)
-				cRough := strings.Replace(info, rStrip, ``, 1)
-				fcount := strings.ReplaceAll(cRough, `">`, ``)
-
-				// Extract views using API
-				views, _ := FetchViews(v)
+				aTitle := ExtractTitle(contents)         // Extract title
+				aSize := ExtractSize(contents)           // Extract size
+				aThumbnail := ExtractThumbnail(contents) // Extract thumbnail
+				aFileCount := ExtractFileCount(contents) // Extract file count
+				aViews, _ := ExtractViewCount(v)         // Extract view count
 
 				// Create type Entry and specify the respective values
-				ent := models.Entry{Link: v, Service: "Bunkr", LastValidation: hdl.Time(), Title: title, Size: fsize, FileCount: fcount, Views: views, Thumbnail: thumbnail, Type: "Folder"}
+				ent := models.Entry{Link: v, Service: "Bunkr", LastValidation: hdl.Time(), Title: aTitle, Size: aSize, FileCount: aFileCount, Views: aViews, Thumbnail: aThumbnail, Type: "Folder"}
 
 				// Append the entry to the results slice to be returned to the main runner
 				results = append(results, ent)
