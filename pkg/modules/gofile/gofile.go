@@ -20,6 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package gofile
 
 import (
+	"fmt"
 	"io"
 	"regexp"
 	"strconv"
@@ -47,8 +48,8 @@ func ExtractTitle(gofileContents string) string {
 	return strings.ReplaceAll(r1, `</title>`, ``)
 }
 
-func ExtractFileCount(title string) int {
-	eDesc := roughDesc.FindString(title)
+func ExtractFileCount(gofileContents string) int {
+	eDesc := roughDesc.FindString(gofileContents)
 	eDesc = strings.ReplaceAll(eDesc, `<meta name='description' content='`, ``)
 	eDesc = strings.ReplaceAll(eDesc, `' />`, ``)
 	eCount := strings.ReplaceAll(eDesc, ` files`, ``)
@@ -61,8 +62,8 @@ func ExtractFileCount(title string) int {
 	return fileCount
 }
 
-func ExtractDownloadCount(title string) int {
-	eDesc := roughDesc.FindString(title)
+func ExtractDownloadCount(gofileContents string) int {
+	eDesc := roughDesc.FindString(gofileContents)
 	eDesc = strings.ReplaceAll(eDesc, `<meta name='description' content='`, ``)
 	eDesc = strings.ReplaceAll(eDesc, `' />`, ``)
 	downloadCount, err := strconv.Atoi(strings.ReplaceAll(eDesc, ` downloads`, ``))
@@ -118,14 +119,22 @@ func Delegate(res string) ([]models.Entry, error) {
 				title := ExtractTitle(contents) // Extract title
 
 				// Create type Entry and specify the respective values
-				ent := models.Entry{Link: v, Service: "GoFile", LastValidation: hdl.Time(), Title: title}
+				ent := models.Entry{Link: v, Service: "GoFile", LastValidation: hdl.Time()}
+
+				fmt.Println(title)
 
 				if strings.Contains(title, "Folder") {
-					title = strings.ReplaceAll(title, `Folder `, ``)
-					ent.FileCount = ExtractFileCount(title)
+					ent.Title = strings.ReplaceAll(title, `Folder `, ``)
+					ent.FileCount = ExtractFileCount(contents)
+					fmt.Println("FOLDER SELECTED")
+					fmt.Println("file count:", ent.FileCount)
+					fmt.Println("download count:", ent.Downloads)
 					ent.Type = "Folder"
 				} else {
-					ent.Downloads = ExtractDownloadCount(title)
+					ent.Downloads = ExtractDownloadCount(contents)
+					fmt.Println("FILE SELECTED")
+					fmt.Println("file count:", ent.FileCount)
+					fmt.Println("download count:", ent.Downloads)
 					ent.Type = "File"
 				}
 

@@ -29,6 +29,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/ax-i-om/tempest/internal/models"
@@ -52,6 +53,8 @@ var src = rand.NewSource(time.Now().UnixNano())
 
 // Custom sync.WaitGroup that implements a counter, used in run() for graceful cleanup
 var wg models.WaitGroupCount = models.WaitGroupCount{}
+
+var writeMutex sync.Mutex
 
 // Global declaration of files/writers in order to write/flush from anywhere in main
 var jsonfile *os.File = nil
@@ -86,6 +89,7 @@ func trueRand(n int, chars string) string {
 func write(results []models.Entry) {
 	// Loop through all entries in results
 	for _, v := range results {
+		writeMutex.Lock()
 		switch mode {
 		case "console": // If mode is set to console, print results to terminal
 			fmt.Println(v.Service, ": ", v.Link)
@@ -114,6 +118,7 @@ func write(results []models.Entry) {
 			// Call flush to ensure that the record is written to the CSV file
 			writer.Flush()
 		}
+		writeMutex.Unlock()
 	}
 }
 
