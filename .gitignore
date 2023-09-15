@@ -25,5 +25,3 @@ go.work
 *.json
 *.csv
 *.csv#
-
-/t

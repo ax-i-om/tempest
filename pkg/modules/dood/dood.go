@@ -24,9 +24,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/ax-i-om/tempest/internal/hdl"
+	"github.com/ax-i-om/tempest/internal/handlers"
 	"github.com/ax-i-om/tempest/internal/models"
-	"github.com/ax-i-om/tempest/internal/req"
 )
 
 // Compile the RegEx expression to be used in the identification and extraction of the Bunkr links
@@ -41,7 +40,7 @@ func Extract(res string) ([]string, error) {
 // Validate performs a GET request to the Dood URL and uses the response status code to identify its validity
 func Validate(x string) (bool, error) {
 	// Perform a GET request using the Dood URL
-	res, err := req.GetRes(x)
+	res, err := handlers.GetRes(x)
 	if err != nil {
 		return false, err
 	}
@@ -84,7 +83,7 @@ func Delegate(res string) ([]models.Entry, error) {
 			// If x, the bool return by Validate(), is true: output the result to the terminal and append the link to the specified results slice.
 			if x {
 				// Create type Entry and specify the respective values
-				ent := models.Entry{Link: v, Service: "Dood", LastValidation: hdl.Time(), Type: "File"}
+				ent := models.Entry{Link: v, Service: "Dood", Type: "File"}
 				// Append the entry to the results slice to be returned to the main runner
 				results = append(results, ent)
 			}

@@ -26,9 +26,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/ax-i-om/tempest/internal/hdl"
+	"github.com/ax-i-om/tempest/internal/handlers"
 	"github.com/ax-i-om/tempest/internal/models"
-	"github.com/ax-i-om/tempest/internal/req"
 )
 
 // Compile RegEx expressions for extraction of links/metadata
@@ -97,7 +96,7 @@ func ExtractFileCount(bunkrContents string) int {
 // alongside an error. The error will be nil if everything is successful. If a failure occurs, -1 will be returned.
 func ExtractViewCount(albumUrl string) (int, error) {
 	// Get body contents of the bunkr link
-	res, err := req.GetRes(`https://slut.bunkr.ru/slutsCount?pageUrl=` + albumUrl)
+	res, err := handlers.GetRes(`https://slut.bunkr.ru/slutsCount?pageUrl=` + albumUrl)
 	if err != nil {
 		return -1, err
 	}
@@ -120,7 +119,7 @@ func ExtractViewCount(albumUrl string) (int, error) {
 // If the link is valid, it will return true. If not, it will return false. Validate also returns an error.
 func Validate(x string) (bool, error) {
 	// Perform a GET request using the Bunkr URL
-	res, err := req.GetRes(x)
+	res, err := handlers.GetRes(x)
 	if err != nil {
 		return false, err
 	}
@@ -156,7 +155,7 @@ func Delegate(res string) ([]models.Entry, error) {
 			// If x, the bool return by Validate(), is true: output the result to the terminal and append the link to the specified results slice.
 			if x {
 				// Get body contents of the bunkr link
-				res, err := req.GetRes(v)
+				res, err := handlers.GetRes(v)
 				if err != nil {
 					continue
 				}
@@ -181,7 +180,7 @@ func Delegate(res string) ([]models.Entry, error) {
 				aViews, _ := ExtractViewCount(v)         // Extract view count
 
 				// Create type Entry and specify the respective values
-				ent := models.Entry{Link: v, Service: "Bunkr", LastValidation: hdl.Time(), Title: aTitle, Size: aSize, FileCount: aFileCount, Views: aViews, Thumbnail: aThumbnail, Type: "Folder"}
+				ent := models.Entry{Link: v, Service: "Bunkr", Title: aTitle, Size: aSize, FileCount: aFileCount, Views: aViews, Thumbnail: aThumbnail, Type: "Folder"}
 
 				// Append the entry to the results slice to be returned to the main runner
 				results = append(results, ent)

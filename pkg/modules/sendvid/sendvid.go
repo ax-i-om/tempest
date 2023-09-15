@@ -26,22 +26,15 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/ax-i-om/tempest/internal/hdl"
+	"github.com/ax-i-om/tempest/internal/handlers"
 	"github.com/ax-i-om/tempest/internal/models"
-	"github.com/ax-i-om/tempest/internal/req"
 )
 
-// Compile the RegEx expression to be used in the identification and extraction of the Sendvid links
-var sLink *regexp.Regexp = regexp.MustCompile("(https|http)://sendvid.com/([a-z0-9]{8})")
-
-// Compile the RegEx expression for extracting the thumbnail URL
-var rThumb *regexp.Regexp = regexp.MustCompile(`(https|http)://thumbs(.*?).jpg`)
-
-// Compile the RegEx expression for extracting the area that contains the view count
-var roughViews *regexp.Regexp = regexp.MustCompile(`<p class="hits"><i class="icon-icn-view"></i>([0-9](.*?))</p>`)
-
-// Compile the RegEx expression for extracting the area that contains the title
-var roughTitle *regexp.Regexp = regexp.MustCompile(`<title>(.*?)</title>`)
+// Compile RegEx expressions for extraction of links/metadata
+var sLink *regexp.Regexp = regexp.MustCompile("(https|http)://sendvid.com/([a-z0-9]{8})")                           // Extract sendvid links
+var rThumb *regexp.Regexp = regexp.MustCompile(`(https|http)://thumbs(.*?).jpg`)                                    // Extract thumbnail
+var roughViews *regexp.Regexp = regexp.MustCompile(`<p class="hits"><i class="icon-icn-view"></i>([0-9](.*?))</p>`) // Extract view count
+var roughTitle *regexp.Regexp = regexp.MustCompile(`<title>(.*?)</title>`)                                          // Extract title
 
 // Extract returns a slice of all Sendvid links contained within a string, if any.
 func Extract(res string) ([]string, error) {
@@ -49,22 +42,29 @@ func Extract(res string) ([]string, error) {
 	return sLink.FindAllString(res, -1), nil
 }
 
+// ExtractTitle takes the body response/contents of a Sendvid page (raw source/html (formatted as string)) as
+// an argument and returns the title as a string.
 func ExtractTitle(sendvidContents string) string {
-	title := roughTitle.FindString(sendvidContents)
-	title = strings.ReplaceAll(title, `<title>`, ``)
-	return strings.ReplaceAll(title, `</title>`, ``)
+	title := roughTitle.FindString(sendvidContents)  // Extract rough title
+	title = strings.ReplaceAll(title, `<title>`, ``) // Strip opening tags
+	return strings.ReplaceAll(title, `</title>`, ``) // Strip closing tags
 }
 
+// ExtractThumbnail takes the body response/contents of a Sendvid page (raw source/html (formatted as string)) as
+// an argument. The extracted URL is unescaped to ensure validity and returned in string format.
 func ExtractThumbnail(sendvidContents string) string {
-	return html.UnescapeString(rThumb.FindString(sendvidContents))
+	return html.UnescapeString(rThumb.FindString(sendvidContents)) // Extract and unescape thumbnail URL
 }
 
+// ExtractViewCount takes the body response/contents of a Sendvid page (raw source/html (formatted as string)) as
+// an argument and returns a string containing the view count, alongside an error. The error will be nil if
+// everything is successful. If a failure occurs, -1 will be returned.
 func ExtractViewCount(sendvidContents string) int {
-	eViews := roughViews.FindString(sendvidContents)
-	eViews = strings.ReplaceAll(eViews, `<p class="hits"><i class="icon-icn-view"></i>`, ``)
-	viewcount, err := strconv.Atoi(strings.ReplaceAll(eViews, `</p>`, ``))
+	eViews := roughViews.FindString(sendvidContents)                                         // Extract rough view count
+	eViews = strings.ReplaceAll(eViews, `<p class="hits"><i class="icon-icn-view"></i>`, ``) // Strip unnecessary html
+	viewcount, err := strconv.Atoi(strings.ReplaceAll(eViews, `</p>`, ``))                   // Strip closing tag and convert to int
 	if err != nil {
-		return -1
+		return -1 // Return -1 to signify an error occured and the filecount could not be converted to Int
 	}
 	return viewcount
 }
@@ -72,7 +72,7 @@ func ExtractViewCount(sendvidContents string) int {
 // Validate performs a GET request to the Sendvid URL and uses the response status code to identify its validity
 func Validate(x string) (bool, error) {
 	// Perform a GET request using the Sendvid URL
-	res, err := req.GetRes(x)
+	res, err := handlers.GetRes(x)
 	if err != nil {
 		return false, err
 	}
@@ -106,7 +106,7 @@ func Delegate(res string) ([]models.Entry, error) {
 			// If x, the bool return by Validate(), is true: output the result to the terminal and append the link to the specified results slice.
 			if x {
 				// Get body contents of the sendvid link
-				res, err := req.GetRes(v)
+				res, err := handlers.GetRes(v)
 				if err != nil {
 					continue
 				}
@@ -125,7 +125,7 @@ func Delegate(res string) ([]models.Entry, error) {
 				aViewCount := ExtractViewCount(contents)
 
 				// Create type Entry and specify the respective values
-				ent := models.Entry{Link: v, Service: "Sendvid", LastValidation: hdl.Time(), Thumbnail: aThumbnail, Views: aViewCount, Title: aTitle, Type: "File"}
+				ent := models.Entry{Link: v, Service: "Sendvid", Thumbnail: aThumbnail, Views: aViewCount, Title: aTitle, Type: "File"}
 				// Append the entry to the results slice to be returned to the main runner
 				results = append(results, ent)
 			}

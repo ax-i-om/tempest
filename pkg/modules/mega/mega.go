@@ -25,31 +25,39 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/ax-i-om/tempest/internal/hdl"
+	"github.com/ax-i-om/tempest/internal/handlers"
 	"github.com/ax-i-om/tempest/internal/models"
-	"github.com/ax-i-om/tempest/internal/req"
 )
 
-// RegEx expressions for extracting metadata
-// Size RegEx expression
-var size *regexp.Regexp = regexp.MustCompile(`(\d+(?:\.\d+)?)\s*([KMGTP]?B)`)
-
-// Extract header property that contains the file count/content
-var filesLine *regexp.Regexp = regexp.MustCompile(`<meta property="og:description" content="(.*?)" />`)
-
-// Extract the only number in said string (file count/content)
+// Compile RegEx expressions for extraction of links/metadata
+var size *regexp.Regexp = regexp.MustCompile(`(\d+(?:\.\d+)?)\s*([KMGTP]?B)`)                           // Extract size
+var filesLine *regexp.Regexp = regexp.MustCompile(`<meta property="og:description" content="(.*?)" />`) // Extract
 var digits *regexp.Regexp = regexp.MustCompile(`\d+`)
-
-// Compile the RegEx expression to be used in the identification and extraction of the Mega links
 var mLink *regexp.Regexp = regexp.MustCompile("(https|http)://mega.nz/(folder|file)/([a-zA-Z0-9]{0,8})#([a-zA-Z0-9_-]{43}|[a-zA-Z0-9_-]{22})")
-
-// Compile the RegEx expression to be used in the extraction of the ID
 var mID *regexp.Regexp = regexp.MustCompile("([a-zA-Z0-9]{8}#)")
 
 // Extract returns a slice of all Mega links contained within a string, if any.
 func Extract(res string) ([]string, error) {
 	// Return all Mega links found within an http response
 	return mLink.FindAllString(res, -1), nil
+}
+
+// ExtractSize takes the body response/contents of a Mega page (raw source/html (formatted as string)) as
+// an argument and returns the total/cumulative file/folder size as a string.
+func ExtractSize(megaContents string) string {
+	return size.FindString(megaContents) // Find size information identified via RegEx and return results
+}
+
+// ExtractFileCount takes the body response/contents of a Mega page (raw source/html (formatted as string)) as
+// an argument and returns the file count as an integer. It will return -1 in the case of a syntax error.  This
+// will only work on Mega folders and not Mega files.
+func ExtractFileCount(megaContents string) int {
+	fl := filesLine.FindString(megaContents)          // Extract file count header
+	count, err := strconv.Atoi(digits.FindString(fl)) // Extract number from header and convert to int
+	if err != nil {
+		return -1 // Return -1 to signify an error occured and the filecount could not be converted to Int
+	}
+	return count
 }
 
 // Validate takes a Mega link/URL and passes it to the Mega API to check whether or not it is online.
@@ -63,7 +71,7 @@ func Validate(x string) (bool, error) {
 	url := "https://g.api.mega.co.nz/cs?id=5644474&n=" + post
 
 	// Perform a GET request using the pre-formatted URL
-	res, err := req.GetRes(url)
+	res, err := handlers.GetRes(url)
 	if err != nil {
 		return false, err
 	}
@@ -105,7 +113,7 @@ func Delegate(res string) ([]models.Entry, error) {
 			// If x, the bool returned by Validate(), is true: append the link to the specified results slice.
 			if x {
 				// Get body contents of the mega folder/file
-				res, err := req.GetRes(v)
+				res, err := handlers.GetRes(v)
 				if err != nil {
 					continue
 				}
@@ -119,29 +127,18 @@ func Delegate(res string) ([]models.Entry, error) {
 				// Convert read results to a string
 				contents := string(body)
 
-				// Initialize variable to potentially be accessed in the following conditional
-				var count int
-				var aType string
-				// If the link contains the word "folder", then the mega link type is that of a folder.
-				if strings.Contains(v, "folder") {
-					// Extract file count header
-					fl := filesLine.FindString(contents)
-					// Extract number from header
-					count, err = strconv.Atoi(digits.FindString(fl))
-					if err != nil {
-						count = -1
-					}
-					// Set fTyp to Folder
-					aType = "Folder"
-				} else { // (handle file link here)
-					aType = "File"
-				}
-
-				// Extract the string that specifies the cumulative size of the mega folder contents or the size of a mega file
-				ss := size.FindString(contents)
+				aSize := ExtractSize(contents)
 
 				// Create type Entry and specify the respective values
-				ent := models.Entry{Link: v, Service: "Mega", Type: aType, Size: ss, FileCount: count, LastValidation: hdl.Time()}
+				ent := models.Entry{Link: v, Service: "Mega", Size: aSize}
+
+				if strings.Contains(v, "folder") {
+					ent.FileCount = ExtractFileCount(contents)
+					ent.Type = "Folder"
+				} else { // (handle file link here)
+					ent.Type = "File"
+				}
+
 				// Append the entry to the results slice to be returned to the main runner
 				results = append(results, ent)
 			}

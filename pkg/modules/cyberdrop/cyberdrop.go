@@ -27,9 +27,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ax-i-om/tempest/internal/hdl"
+	"github.com/ax-i-om/tempest/internal/handlers"
 	"github.com/ax-i-om/tempest/internal/models"
-	"github.com/ax-i-om/tempest/internal/req"
 )
 
 // Compile RegEx expressions for extraction of links/metadata
@@ -121,7 +120,7 @@ func ExtractUploadDate(doodContents string, dateFormat string) (string, error) {
 // Validate performs a GET request to the Cyberdrop URL and uses the response status code to identify its validity
 func Validate(x string) (bool, error) {
 	// Perform a GET request using the Cyberdrop URL
-	res, err := req.GetRes(x)
+	res, err := handlers.GetRes(x)
 	if err != nil {
 		return false, err
 	}
@@ -155,7 +154,7 @@ func Delegate(res string) ([]models.Entry, error) {
 			// If x, the bool return by Validate(), is true: output the result to the terminal and append the link to the specified results slice.
 			if x {
 				// Get body contents of the cyberdrop link
-				res, err := req.GetRes(v)
+				res, err := handlers.GetRes(v)
 				if err != nil {
 					continue
 				}
@@ -181,7 +180,7 @@ func Delegate(res string) ([]models.Entry, error) {
 				aUploadDate, _ := ExtractUploadDate(contents, "Jan 02, 2006") // Extract upload date
 
 				// Create type Entry and specify the respective values
-				ent := models.Entry{Link: v, Service: "Cyberdrop", LastValidation: hdl.Time(), Thumbnail: aThumbnail, Description: aDescription, Title: aTitle, FileCount: aCount, Size: aSize, Type: "Folder", Uploaded: aUploadDate}
+				ent := models.Entry{Link: v, Service: "Cyberdrop", Thumbnail: aThumbnail, Description: aDescription, Title: aTitle, FileCount: aCount, Size: aSize, Type: "Folder", Uploaded: aUploadDate}
 				// Append the entry to the results slice to be returned to the main runner
 				results = append(results, ent)
 			}

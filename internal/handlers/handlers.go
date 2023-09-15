@@ -16,8 +16,8 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-// Package req contains functions that are used when performing network requests
-package req
+// Package handlers contains functions that are used globally
+package handlers
 
 import (
 	"net/http"

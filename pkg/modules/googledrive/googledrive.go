@@ -24,16 +24,15 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/ax-i-om/tempest/internal/hdl"
+	"github.com/ax-i-om/tempest/internal/handlers"
 	"github.com/ax-i-om/tempest/internal/models"
-	"github.com/ax-i-om/tempest/internal/req"
 )
 
-// Compile the RegEx expression to be used in the identification and extraction of the Google Drive links
-var gLink *regexp.Regexp = regexp.MustCompile("(https|http)://drive.google.com/(folder|file|drive)/(d|folders)/(1[a-zA-Z0-9_-]{32}|0[a-zA-Z0-9_-]{27})")
+// Compile RegEx expressions for extraction of links/metadata
 
-// Compile the RegEx expression for extracting the area that contains the title
-var roughTitle *regexp.Regexp = regexp.MustCompile(`<title>(.*?)</title>`)
+// Extract Google Drive links
+var gLink *regexp.Regexp = regexp.MustCompile("(https|http)://drive.google.com/(folder|file|drive)/(d|folders)/(1[a-zA-Z0-9_-]{32}|0[a-zA-Z0-9_-]{27})")
+var roughTitle *regexp.Regexp = regexp.MustCompile(`<title>(.*?)</title>`) // Extract Title
 
 // Extract returns a slice of all Google Drive links contained within a string, if any.
 func Extract(res string) ([]string, error) {
@@ -41,18 +40,19 @@ func Extract(res string) ([]string, error) {
 	return gLink.FindAllString(res, -1), nil
 }
 
+// ExtractTitle takes the body response/contents of a Google Drive page (raw source/html (formatted as string)) as
+// an argument and returns the title as a string.
 func ExtractTitle(googledriveContents string) string {
-	// Extract title
-	eTitle := roughTitle.FindString(googledriveContents)
-	eTitle = strings.ReplaceAll(eTitle, `<title>`, ``)
-	eTitle = strings.ReplaceAll(eTitle, `</title>`, ``)
-	return strings.ReplaceAll(eTitle, ` - Google Drive`, ``)
+	eTitle := roughTitle.FindString(googledriveContents)     // Extract rough title
+	eTitle = strings.ReplaceAll(eTitle, `<title>`, ``)       // Strip opening tags
+	eTitle = strings.ReplaceAll(eTitle, `</title>`, ``)      // Strip closing tags
+	return strings.ReplaceAll(eTitle, ` - Google Drive`, ``) // Strip extra text
 }
 
 // Validate performs a GET request to the Google Drive URL and uses the response status code to identify its validity
 func Validate(x string) (bool, error) {
 	// Perform a GET request using the Google Drive URL
-	res, err := req.GetRes(x)
+	res, err := handlers.GetRes(x)
 	if err != nil {
 		return false, err
 	}
@@ -86,7 +86,7 @@ func Delegate(res string) ([]models.Entry, error) {
 			// If x, the bool return by Validate(), is true: output the result to the terminal and append the link to the specified results slice.
 			if x {
 				// Get body contents of the sendvid link
-				res, err := req.GetRes(v)
+				res, err := handlers.GetRes(v)
 				if err != nil {
 					continue
 				}
@@ -102,16 +102,15 @@ func Delegate(res string) ([]models.Entry, error) {
 
 				aTitle := ExtractTitle(contents)
 
-				var aType string
+				// Create type Entry and specify the respective values
+				ent := models.Entry{Link: v, Service: "Google Drive", Title: aTitle}
 
 				if strings.Contains(v, `/file/`) {
-					aType = "File"
+					ent.Type = "File"
 				} else {
-					aType = "Folder"
+					ent.Type = "Folder"
 				}
 
-				// Create type Entry and specify the respective values
-				ent := models.Entry{Link: v, Service: "Google Drive", LastValidation: hdl.Time(), Type: aType, Title: aTitle}
 				// Append the entry to the results slice to be returned to the main runner
 				results = append(results, ent)
 			}

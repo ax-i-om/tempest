@@ -25,9 +25,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/ax-i-om/tempest/internal/hdl"
+	"github.com/ax-i-om/tempest/internal/handlers"
 	"github.com/ax-i-om/tempest/internal/models"
-	"github.com/ax-i-om/tempest/internal/req"
 )
 
 // Compile RegEx expressions for extraction of links/metadata
@@ -41,33 +40,39 @@ func Extract(res string) ([]string, error) {
 	return gLink.FindAllString(res, -1), nil
 }
 
+// ExtractTitle takes the body response/contents of a Gofile page (raw source/html (formatted as string)) as
+// an argument and returns the title as a string.
 func ExtractTitle(gofileContents string) string {
-	rt := roughTitle.FindString(gofileContents)
-	r1 := strings.ReplaceAll(rt, `<title>`, ``)
-	return strings.ReplaceAll(r1, `</title>`, ``)
+	rt := roughTitle.FindString(gofileContents)   // Extract rough title
+	r1 := strings.ReplaceAll(rt, `<title>`, ``)   // Strip opening tag
+	return strings.ReplaceAll(r1, `</title>`, ``) // Strip closing tag and return
 }
 
+// ExtractFileCount takes the body response/contents of a Gofile page (raw source/html (formatted as string)) as
+// an argument and returns the album's file count as an integer. It will return -1 in the case of a syntax error.
 func ExtractFileCount(gofileContents string) int {
-	eDesc := roughDesc.FindString(gofileContents)
-	eDesc = strings.ReplaceAll(eDesc, `<meta name='description' content='`, ``)
-	eDesc = strings.ReplaceAll(eDesc, `' />`, ``)
-	eCount := strings.ReplaceAll(eDesc, ` files`, ``)
-	eCount = strings.ReplaceAll(eCount, ",", "")
-	eCount = strings.ReplaceAll(eCount, ".", "")
+	eDesc := roughDesc.FindString(gofileContents)                               // Extract rough description
+	eDesc = strings.ReplaceAll(eDesc, `<meta name='description' content='`, ``) // Strip unnecessary html
+	eDesc = strings.ReplaceAll(eDesc, `' />`, ``)                               // Strip unnecessary html
+	eCount := strings.ReplaceAll(eDesc, ` files`, ``)                           // Strip unnecessary text
+	eCount = strings.ReplaceAll(eCount, ",", "")                                // Strip commas (,)
+	eCount = strings.ReplaceAll(eCount, ".", "")                                // Strip periods (.)
 	fileCount, err := strconv.Atoi(eCount)
 	if err != nil {
-		return -1
+		return -1 // Return -1 to signify an error occured and the filecount could not be converted to Int
 	}
 	return fileCount
 }
 
+// ExtractDownloadCount takes the body response/contents of a Gofile page (raw source/html (formatted as string)) as
+// an argument and returns the album's file count as an integer. It will return -1 in the case of a syntax error.
 func ExtractDownloadCount(gofileContents string) int {
-	eDesc := roughDesc.FindString(gofileContents)
-	eDesc = strings.ReplaceAll(eDesc, `<meta name='description' content='`, ``)
-	eDesc = strings.ReplaceAll(eDesc, `' />`, ``)
-	downloadCount, err := strconv.Atoi(strings.ReplaceAll(eDesc, ` downloads`, ``))
+	eDesc := roughDesc.FindString(gofileContents)                                   // Extract rough description
+	eDesc = strings.ReplaceAll(eDesc, `<meta name='description' content='`, ``)     // Strip unnecessary html
+	eDesc = strings.ReplaceAll(eDesc, `' />`, ``)                                   // Strip unnecessary html
+	downloadCount, err := strconv.Atoi(strings.ReplaceAll(eDesc, ` downloads`, ``)) // Strip text, convert to string
 	if err != nil {
-		return -1
+		return -1 // Return -1 to signify an error occured and the downloadcount could not be converted to Int
 	}
 	return downloadCount
 }
@@ -75,7 +80,7 @@ func ExtractDownloadCount(gofileContents string) int {
 // Validate takes a Gofile link/URL and checks certain metadata patterns to identify whether or not the link is valid/online.
 func Validate(x string) (bool, string, error) {
 	// Perform a GET request using the Gofile URL
-	res, err := req.GetRes(x)
+	res, err := handlers.GetRes(x)
 	if err != nil {
 		return false, "", err
 	}
@@ -118,13 +123,14 @@ func Delegate(res string) ([]models.Entry, error) {
 				title := ExtractTitle(contents) // Extract title
 
 				// Create type Entry and specify the respective values
-				ent := models.Entry{Link: v, Service: "GoFile", LastValidation: hdl.Time()}
+				ent := models.Entry{Link: v, Service: "GoFile"}
 
 				if strings.Contains(title, "Folder") {
 					ent.Title = strings.ReplaceAll(title, `Folder `, ``)
 					ent.FileCount = ExtractFileCount(contents)
 					ent.Type = "Folder"
 				} else {
+					ent.Title = title
 					ent.Downloads = ExtractDownloadCount(contents)
 					ent.Type = "File"
 				}

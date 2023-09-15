@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package main
 
 import (
+	"bufio"
 	"context"
 	"encoding/csv"
 	"encoding/json"
@@ -32,8 +33,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ax-i-om/tempest/internal/handlers"
 	"github.com/ax-i-om/tempest/internal/models"
-	"github.com/ax-i-om/tempest/internal/req"
 	"github.com/ax-i-om/tempest/pkg/modules/bunkr"
 	"github.com/ax-i-om/tempest/pkg/modules/cyberdrop"
 	"github.com/ax-i-om/tempest/pkg/modules/dood"
@@ -49,17 +50,18 @@ var mode, filename string
 // Checks if a CSV file with filename: filename already exists to determine whether or not to write headers
 var existed bool
 
-var src = rand.NewSource(time.Now().UnixNano())
-
 // Custom sync.WaitGroup that implements a counter, used in run() for graceful cleanup
 var wg models.WaitGroupCount = models.WaitGroupCount{}
 
+// Mutex lock for write()
 var writeMutex sync.Mutex
 
 // Global declaration of files/writers in order to write/flush from anywhere in main
 var jsonfile *os.File = nil
 var csvfile *os.File = nil
 var writer *csv.Writer = nil
+
+var src = rand.NewSource(time.Now().UnixNano())
 
 const (
 	leIndexBits = 6
@@ -108,7 +110,7 @@ func write(results []models.Entry) {
 			}
 		case "csv": // If mode is set to csv:
 			// Create a CSV record based on the current iteration's accompanying entry (v)
-			row := []string{v.Link, v.LastValidation, v.Title, v.Description, v.Service, v.Uploaded, v.Type, v.Size, v.Length, fmt.Sprint(v.FileCount), v.Thumbnail, fmt.Sprint(v.Downloads), fmt.Sprint(v.Views)}
+			row := []string{v.Link, v.Title, v.Description, v.Service, v.Uploaded, v.Type, v.Size, v.Length, fmt.Sprint(v.FileCount), v.Thumbnail, fmt.Sprint(v.Downloads), fmt.Sprint(v.Views)}
 			// Write the record
 			err := writer.Write(row)
 			if err != nil {
@@ -178,7 +180,7 @@ func printUsage() {
 	fmt.Println("\t\tJSON Example:\tgo run main.go json results.json")
 	fmt.Println("\t\tCSV Example:\tgo run main.go csv results.csv")
 	fmt.Println()
-	fmt.Println("\tgo run main.go clean <filename/filepath>\t- Clean/Validate JSON file created by Tempest")
+	fmt.Println("\tgo run main.go clean <filename/filepath>\t- Clean/Validate/Deduplicate JSON file created by Tempest")
 	fmt.Println("\t\tExample:\tgo run main.go clean results.json")
 	fmt.Println("\t\tNOTE:\tReusing a cleaned file for Tempest output will cause further formatting issues")
 	fmt.Println()
@@ -191,7 +193,7 @@ func printUsage() {
 // worker handles the randomly generated Rentry.co URL and processes the results
 func worker(renturl string) error {
 	// Performs a get request on the randomly generated Rentry.co URL.
-	res, err := req.GetRes(renturl)
+	res, err := handlers.GetRes(renturl)
 	if err != nil {
 		return err
 	}
@@ -374,7 +376,7 @@ func main() {
 			writer = csv.NewWriter(csvfile)
 			if !existed { // Check if the specified csv file already existed by referencing the existed flag, if it did not exist:
 				// Create/format headers string slice
-				headers := []string{"link", "lastvalidation", "title", "description", "service", "uploaded", "type", "size", "length", "filecount", "thumbnail", "downloads", "views"}
+				headers := []string{"link", "title", "description", "service", "uploaded", "type", "size", "length", "filecount", "thumbnail", "downloads", "views"}
 				// Write headers
 				err := writer.Write(headers)
 				if err != nil { //
@@ -404,8 +406,48 @@ func main() {
 			fmt.Println("File Name: ", filename)
 			fmt.Println()
 
+			opened, err := os.Open(filename)
+
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%s\n", err)
+				// Calling to wipe() here is unnecessary, as the clean case doesn't assign any files/writers
+				// Exit with error
+				os.Exit(1)
+			}
+			scanner := bufio.NewScanner(opened)
+			scanner.Split(bufio.ScanLines)
+			var entries []string
+
+			for scanner.Scan() {
+				entries = append(entries, scanner.Text())
+			}
+
+			opened.Close()
+
+			emk := make(map[string]bool)
+			deduped := []string{}
+			for _, item := range entries {
+				if _, value := emk[item]; !value {
+					emk[item] = true
+					deduped = append(deduped, item)
+				}
+			}
+
+			dedupedToString := ""
+
+			for _, entry := range deduped {
+				dedupedToString += (entry + "\n")
+			}
+
+			err = os.WriteFile("clean-"+filename, []byte(dedupedToString), 0600)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%s\n", err)
+				// Exit with error
+				os.Exit(1)
+			}
+
 			// Attempt to read the specified json file
-			content, err := os.ReadFile(filename)
+			content, err := os.ReadFile("clean-" + filename)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "%s\n", err)
 				// Calling to wipe() here is unnecessary, as the clean case doesn't assign any files/writers

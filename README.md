@@ -3,7 +3,7 @@
     <h1 align="center">Tempest</h1>
   <p align="center">
     <a href="https://goreportcard.com/report/github.com/ax-i-om/tempest"><img src="https://goreportcard.com/badge/github.com/ax-i-om/tempest" alt="Go Report Card"></a>
-    <a><img src="https://img.shields.io/badge/version-0.3.2-blue.svg" alt="v0.3.2"></a><br>
+    <a><img src="https://img.shields.io/badge/version-0.4.0-blue.svg" alt="v0.4.0"></a><br>
     Leveraging paste sites as a medium for discovery<br>
 </a>
   </p><br>
@@ -18,7 +18,7 @@
   - [Usage](#usage)
   - [Cloud Storage / File Sharing Platform Modules](#cloud-storage--file-sharing-platform-modules)
   - [Entry Format](#entry-format)
-  - [Notes](#notes)
+  - [Important Notes](#important-notes)
 
 ## Information
 
@@ -57,27 +57,26 @@ In order to forcefully shut down Tempest press `Ctrl + C` in the terminal **TWIC
 
 If you decide to output the results to a JSON file specifically, it will not be valid JSON.<br>
 Tempest comes bundled with a function for cleaning the resulting JSON content and can be used like so: `go run main.go clean results.json`<br>
-This will be the quickest way of converting the JSON file formatting into one that is valid; however, reusing this file for results will cause further formatting issues.
+This will be the quickest way of converting the JSON file formatting into one that is valid; however, reusing this file for results will cause further formatting issues. The clean function also removes any duplicate entries from the file.
 *Note:* If you exclude the file extension *(.json/.csv)*, one will be automatically appended.
 
 ### Cloud Storage / File Sharing Platform Modules
 
-| Module        | Status       |
-| :-----------: | -------------|
-| Bunkr         | Functioning  |
-| Cyberdrop     | Functioning  |
-| Dood          | Functioning  |
-| Gofile        | Functioning  |
-| Google Drive  | Functioning  |
-| Mega          | Functioning  |
-| Sendvid       | Functioning  |
+| Module        | Status       | Information Extracted                                                            |
+| :-----------: | ------------ | :------------------------------------------------------------------------------: |
+| Bunkr         | Functioning  | Link, Title, Service, Type, Size, FileCount, Thumbnail, Views                    |
+| Cyberdrop     | Functioning  | Link, Title, Service, Type, Size, FileCount, Thumbnail, Description, UploadDate  |
+| Dood          | Functioning  | Link, Service, Type                                                              |
+| Gofile        | Functioning  | Link, Title, Service, Type, FileCount, Downloads                                 |
+| Google Drive  | Functioning  | Link, Title, Service, Type                                                       |
+| Mega          | Functioning  | Link, Service, Type, Size, FileCount                                             |
+| Sendvid       | Functioning  | Link, Title, Service, Type, Thumbnail, Views                                     |
 
 ### Entry Format
 
 ``` go
 type Entry struct {
 	Link           string `json:"link"`
-	LastValidation string `json:"lastvalidation"`
 
 	Title       string `json:"title"`
 	Description string `json:"description"`
@@ -95,6 +94,7 @@ type Entry struct {
 }
 ```
 
-### Notes
+### Important Notes
 
 - Mega file count and size is unreliable, as the metadata specified in the Mega folder/file headers doesn't seem to accurately align with the true content's file count/size. Take with a grain of salt.
+- CSV values are delimited with commas (,). Ensure that fields are not separated via other characters/delimeters such as semicolons (;) and tabs as this may cause presentation/formatting issues.

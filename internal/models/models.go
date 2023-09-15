@@ -26,8 +26,7 @@ import (
 
 // Entry represents the extracted link and it's accompanying data.
 type Entry struct {
-	Link           string `json:"link"`
-	LastValidation string `json:"lastvalidation"`
+	Link string `json:"link"`
 
 	Title       string `json:"title"`
 	Description string `json:"description"`
