@@ -2,9 +2,10 @@
   <a><img src="./images/icon.png" width=280 height="245"></a>
     <h1 align="center">Tempest</h1>
   <p align="center">
-    <a href="https://goreportcard.com/report/github.com/ax-i-om/tempest"><img src="https://goreportcard.com/badge/github.com/ax-i-om/tempest" alt="Go Report Card"></a>
-    <a><img src="https://img.shields.io/badge/version-0.5.0-blue.svg" alt="v0.5.0"></a><br>
-    Leveraging paste sites as a medium for discovery<br>
+    <a href="https://pkg.go.dev/github.com/ax-i-om/tempest#section-directories"><img src="https://pkg.go.dev/badge/github.com/ax-i-om/tempest.svg" alt=""></a>
+    <a><img src="https://img.shields.io/badge/version-0.5.0-blue.svg" alt="v0.5.0"></a>
+    <a href="https://goreportcard.com/report/github.com/ax-i-om/tempest"><img src="https://goreportcard.com/badge/github.com/ax-i-om/tempest" alt="Go Report Card"></a><br>
+   Leverage paste sites as a medium for discovery of objectionable/infringing materials. <br>
 </a>
   </p><br>
 </p>
