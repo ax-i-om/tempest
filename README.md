@@ -2,6 +2,7 @@
   <a><img src="./images/icon.png" width=280 height="245"></a>
     <h1 align="center">Tempest</h1>
   <p align="center">
+    <a href="https://app.deepsource.com/gh/ax-i-om/tempest/" target="_blank"><img alt="DeepSource" title="DeepSource" src="https://app.deepsource.com/gh/ax-i-om/tempest.svg/?label=active+issues&show_trend=true"/></a>
     <a href="https://pkg.go.dev/github.com/ax-i-om/tempest#section-directories"><img src="https://pkg.go.dev/badge/github.com/ax-i-om/tempest.svg" alt=""></a>
     <a><img src="https://img.shields.io/badge/version-0.5.0-blue.svg" alt="v0.5.0"></a>
     <a href="https://goreportcard.com/report/github.com/ax-i-om/tempest"><img src="https://goreportcard.com/badge/github.com/ax-i-om/tempest" alt="Go Report Card"></a><br>
