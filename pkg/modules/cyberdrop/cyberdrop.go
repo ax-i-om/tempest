@@ -133,7 +133,7 @@ func Validate(x string) (bool, error) {
 }
 
 // Delegate takes a string as an argument and returns a slice of valid Cyberdrop links found within the response (if any) or nil, and an error
-func Delegate(res string) ([]models.Entry, error) {
+func Delegate(res, source string) ([]models.Entry, error) {
 	// Use Extract() to extract any existing Cyberdrop links from the response
 	x, err := Extract(res)
 	if err != nil {
@@ -180,7 +180,7 @@ func Delegate(res string) ([]models.Entry, error) {
 				aUploadDate, _ := ExtractUploadDate(contents, "Jan 02, 2006") // Extract upload date
 
 				// Create type Entry and specify the respective values
-				ent := models.Entry{Link: v, Service: "Cyberdrop", Thumbnail: aThumbnail, Description: aDescription, Title: aTitle, FileCount: aCount, Size: aSize, Type: "Folder", Uploaded: aUploadDate}
+				ent := models.Entry{Source: source, Link: v, Service: "Cyberdrop", Thumbnail: aThumbnail, Description: aDescription, Title: aTitle, FileCount: aCount, Size: aSize, Type: "Folder", Uploaded: aUploadDate}
 				// Append the entry to the results slice to be returned to the main runner
 				results = append(results, ent)
 			}

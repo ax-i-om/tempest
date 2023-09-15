@@ -100,7 +100,7 @@ func Validate(x string) (bool, string, error) {
 }
 
 // Delegate takes a string as an argument and returns a slice of valid Gofile links found within the response (if any) and an error
-func Delegate(res string) ([]models.Entry, error) {
+func Delegate(res, source string) ([]models.Entry, error) {
 	// Use Extract() to extract any existing Gofile links from the response
 	x, err := Extract(res)
 	if err != nil {
@@ -123,7 +123,7 @@ func Delegate(res string) ([]models.Entry, error) {
 				title := ExtractTitle(contents) // Extract title
 
 				// Create type Entry and specify the respective values
-				ent := models.Entry{Link: v, Service: "GoFile"}
+				ent := models.Entry{Source: source, Link: v, Service: "GoFile"}
 
 				if strings.Contains(title, "Folder") {
 					ent.Title = strings.ReplaceAll(title, `Folder `, ``)

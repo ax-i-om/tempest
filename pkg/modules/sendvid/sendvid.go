@@ -85,7 +85,7 @@ func Validate(x string) (bool, error) {
 }
 
 // Delegate takes a string as an argument and returns a slice of valid Senvid links found within the response (if any) and an error
-func Delegate(res string) ([]models.Entry, error) {
+func Delegate(res, source string) ([]models.Entry, error) {
 	// Use Extract() to extract any existing Sendvid links from the response
 	x, err := Extract(res)
 	if err != nil {
@@ -125,7 +125,7 @@ func Delegate(res string) ([]models.Entry, error) {
 				aViewCount := ExtractViewCount(contents)
 
 				// Create type Entry and specify the respective values
-				ent := models.Entry{Link: v, Service: "Sendvid", Thumbnail: aThumbnail, Views: aViewCount, Title: aTitle, Type: "File"}
+				ent := models.Entry{Source: source, Link: v, Service: "Sendvid", Thumbnail: aThumbnail, Views: aViewCount, Title: aTitle, Type: "File"}
 				// Append the entry to the results slice to be returned to the main runner
 				results = append(results, ent)
 			}

@@ -91,7 +91,7 @@ func Validate(x string) (bool, error) {
 }
 
 // Delegate takes a string as an argument and returns a slice of valid Mega links found within the response (if any) and an error
-func Delegate(res string) ([]models.Entry, error) {
+func Delegate(res, source string) ([]models.Entry, error) {
 	// Use Extract() to extract any existing Mega links from the response
 	x, err := Extract(res)
 	if err != nil {
@@ -130,7 +130,7 @@ func Delegate(res string) ([]models.Entry, error) {
 				aSize := ExtractSize(contents)
 
 				// Create type Entry and specify the respective values
-				ent := models.Entry{Link: v, Service: "Mega", Size: aSize}
+				ent := models.Entry{Source: source, Link: v, Service: "Mega", Size: aSize}
 
 				if strings.Contains(v, "folder") {
 					ent.FileCount = ExtractFileCount(contents)

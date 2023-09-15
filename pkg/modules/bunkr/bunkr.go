@@ -132,7 +132,7 @@ func Validate(x string) (bool, error) {
 }
 
 // Delegate takes a string as an argument and returns a slice of valid Bunkr links found within the response (if any) or nil, and an error
-func Delegate(res string) ([]models.Entry, error) {
+func Delegate(res, source string) ([]models.Entry, error) {
 	// Use Convert() to convert all bunkr link domains to bunkrr.su (the currently active one)
 	c := Convert(res)
 	// Use Extract() to extract any existing Bunkr links from the converted response
@@ -180,7 +180,7 @@ func Delegate(res string) ([]models.Entry, error) {
 				aViews, _ := ExtractViewCount(v)         // Extract view count
 
 				// Create type Entry and specify the respective values
-				ent := models.Entry{Link: v, Service: "Bunkr", Title: aTitle, Size: aSize, FileCount: aFileCount, Views: aViews, Thumbnail: aThumbnail, Type: "Folder"}
+				ent := models.Entry{Source: source, Link: v, Service: "Bunkr", Title: aTitle, Size: aSize, FileCount: aFileCount, Views: aViews, Thumbnail: aThumbnail, Type: "Folder"}
 
 				// Append the entry to the results slice to be returned to the main runner
 				results = append(results, ent)

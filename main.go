@@ -110,7 +110,7 @@ func write(results []models.Entry) {
 			}
 		case "csv": // If mode is set to csv:
 			// Create a CSV record based on the current iteration's accompanying entry (v)
-			row := []string{v.Link, v.Title, v.Description, v.Service, v.Uploaded, v.Type, v.Size, v.Length, fmt.Sprint(v.FileCount), v.Thumbnail, fmt.Sprint(v.Downloads), fmt.Sprint(v.Views)}
+			row := []string{v.Source, v.Link, v.Title, v.Description, v.Service, v.Uploaded, v.Type, v.Size, v.Length, fmt.Sprint(v.FileCount), v.Thumbnail, fmt.Sprint(v.Downloads), fmt.Sprint(v.Views)}
 			// Write the record
 			err := writer.Write(row)
 			if err != nil {
@@ -191,9 +191,9 @@ func printUsage() {
 }
 
 // worker handles the randomly generated Rentry.co URL and processes the results
-func worker(renturl string) error {
+func worker(source string) error {
 	// Performs a get request on the randomly generated Rentry.co URL.
-	res, err := handlers.GetRes(renturl)
+	res, err := handlers.GetRes(source)
 	if err != nil {
 		return err
 	}
@@ -213,49 +213,49 @@ func worker(renturl string) error {
 		// Delegate the string to all specified modules
 
 		// Mega Module
-		vMega, err := mega.Delegate(conv)
+		vMega, err := mega.Delegate(conv, source)
 		if err != nil {
 			return err
 		}
 		results = append(results, vMega...)
 
 		// Gofile Module
-		vGofile, err := gofile.Delegate(conv)
+		vGofile, err := gofile.Delegate(conv, source)
 		if err != nil {
 			return err
 		}
 		results = append(results, vGofile...)
 
 		// Sendvid Module
-		vSendvid, err := sendvid.Delegate(conv)
+		vSendvid, err := sendvid.Delegate(conv, source)
 		if err != nil {
 			return err
 		}
 		results = append(results, vSendvid...)
 
 		// Cyberdrop Module
-		vCyberdrop, err := cyberdrop.Delegate(conv)
+		vCyberdrop, err := cyberdrop.Delegate(conv, source)
 		if err != nil {
 			return err
 		}
 		results = append(results, vCyberdrop...)
 
 		// Bunkr Module
-		vBunkr, err := bunkr.Delegate(conv)
+		vBunkr, err := bunkr.Delegate(conv, source)
 		if err != nil {
 			return err
 		}
 		results = append(results, vBunkr...)
 
 		// Google Drive Module
-		vGdrive, err := googledrive.Delegate(conv)
+		vGdrive, err := googledrive.Delegate(conv, source)
 		if err != nil {
 			return err
 		}
 		results = append(results, vGdrive...)
 
 		// Dood Module
-		vDood, err := dood.Delegate(conv)
+		vDood, err := dood.Delegate(conv, source)
 		if err != nil {
 			return err
 		}
@@ -376,7 +376,7 @@ func main() {
 			writer = csv.NewWriter(csvfile)
 			if !existed { // Check if the specified csv file already existed by referencing the existed flag, if it did not exist:
 				// Create/format headers string slice
-				headers := []string{"link", "title", "description", "service", "uploaded", "type", "size", "length", "filecount", "thumbnail", "downloads", "views"}
+				headers := []string{"source", "link", "title", "description", "service", "uploaded", "type", "size", "length", "filecount", "thumbnail", "downloads", "views"}
 				// Write headers
 				err := writer.Write(headers)
 				if err != nil { //
@@ -460,7 +460,7 @@ func main() {
 			// Trim the rightmost comma from end file
 			middle = strings.TrimRight(middle, ",")
 			// Append two tabs to the beginning of each entry (formatting)
-			middle = strings.ReplaceAll(middle, "{\"link\":\"", "\t\t{\"link\":\"")
+			middle = strings.ReplaceAll(middle, "{\"source\":\"", "\t\t{\"source\":\"")
 
 			// Combine the strings
 			comp := "{\n\t\"content\":[\n" + middle + "\n\t]\n}"

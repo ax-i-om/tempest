@@ -3,7 +3,7 @@
     <h1 align="center">Tempest</h1>
   <p align="center">
     <a href="https://goreportcard.com/report/github.com/ax-i-om/tempest"><img src="https://goreportcard.com/badge/github.com/ax-i-om/tempest" alt="Go Report Card"></a>
-    <a><img src="https://img.shields.io/badge/version-0.4.0-blue.svg" alt="v0.4.0"></a><br>
+    <a><img src="https://img.shields.io/badge/version-0.5.0-blue.svg" alt="v0.5.0"></a><br>
     Leveraging paste sites as a medium for discovery<br>
 </a>
   </p><br>
@@ -76,7 +76,8 @@ This will be the quickest way of converting the JSON file formatting into one th
 
 ``` go
 type Entry struct {
-	Link           string `json:"link"`
+	Source string `json:"source"`
+	Link   string `json:"link"`
 
 	Title       string `json:"title"`
 	Description string `json:"description"`
@@ -86,11 +87,11 @@ type Entry struct {
 	Type      string `json:"type"`
 	Size      string `json:"size"`
 	Length    string `json:"length"`
-	FileCount string `json:"filecount"`
+	FileCount int    `json:"filecount"`
 
 	Thumbnail string `json:"thumbnail"`
-	Downloads string `json:"downloads"`
-	Views     string `json:"views"`
+	Downloads int    `json:"downloads"`
+	Views     int    `json:"views"`
 }
 ```
 
