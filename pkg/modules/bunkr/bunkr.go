@@ -60,7 +60,7 @@ func ExtractTitle(bunkrContents string) string {
 	eTitle := roughTitle.FindString(bunkrContents)      // Extract rough title via RegEx
 	eTitle = strings.ReplaceAll(eTitle, `<title>`, ``)  // Strip opening tag
 	eTitle = strings.ReplaceAll(eTitle, `</title>`, ``) // Strip closing tag
-	return strings.ReplaceAll(eTitle, ` | Bunkr`, ``)   // Strip unneccesary text
+	return strings.ReplaceAll(eTitle, ` | Bunkr`, ``)   // Strip unnecessary text
 }
 
 // ExtractSize takes the body response/contents of a Bunkr page (raw source/html (formatted as string)) as

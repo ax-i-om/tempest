@@ -364,7 +364,7 @@ func main() {
 					// If error doesn't occur when trying to create file, this means one likely did not already exist or may have been overwritten; therefore,
 					// set existed flag to false
 					existed = false
-				} else { // An error unrelated to a files existence/lack-thereof occured, resulting in an inability to create/open csvfile
+				} else { // An error unrelated to a files existence/lack-thereof occurred, resulting in an inability to create/open csvfile
 					// Close all files/flush all writers
 					wipe()
 					fmt.Fprintf(os.Stderr, "%s\n", err)
@@ -425,7 +425,7 @@ func main() {
 			opened.Close()
 
 			emk := make(map[string]bool)
-			deduped := []string{}
+			var deduped []string
 			for _, item := range entries {
 				if _, value := emk[item]; !value {
 					emk[item] = true

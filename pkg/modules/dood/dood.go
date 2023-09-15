@@ -52,12 +52,10 @@ func Validate(x string) (bool, error) {
 	}
 
 	// Read the response, if the title contains the below specified string, then the Dood link is not online.
-	if strings.Contains(string(body), "<title>Video not found | DoodStream</title>") {
-		return false, res.Body.Close()
-	} else if res.StatusCode == 403 {
+	if !strings.Contains(string(body), "<title>Video not found | DoodStream</title>") || res.StatusCode == 403 {
 		return true, res.Body.Close()
 	} else {
-		return true, res.Body.Close()
+		return false, res.Body.Close()
 	}
 }
 
