@@ -36,7 +36,6 @@ type Entry struct {
 
 	Type      string `json:"type"`
 	Size      string `json:"size"`
-	Length    string `json:"length"`
 	FileCount int    `json:"filecount"`
 
 	Thumbnail string `json:"thumbnail"`

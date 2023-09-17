@@ -110,7 +110,7 @@ func write(results []models.Entry) {
 			}
 		case "csv": // If mode is set to csv:
 			// Create a CSV record based on the current iteration's accompanying entry (v)
-			row := []string{v.Source, v.Link, v.Title, v.Description, v.Service, v.Uploaded, v.Type, v.Size, v.Length, fmt.Sprint(v.FileCount), v.Thumbnail, fmt.Sprint(v.Downloads), fmt.Sprint(v.Views)}
+			row := []string{v.Source, v.Link, v.Title, v.Description, v.Service, v.Uploaded, v.Type, v.Size, fmt.Sprint(v.FileCount), v.Thumbnail, fmt.Sprint(v.Downloads), fmt.Sprint(v.Views)}
 			// Write the record
 			err := writer.Write(row)
 			if err != nil {
@@ -180,9 +180,10 @@ func printUsage() {
 	fmt.Println("\t\tJSON Example:\tgo run main.go json results.json")
 	fmt.Println("\t\tCSV Example:\tgo run main.go csv results.csv")
 	fmt.Println()
-	fmt.Println("\tgo run main.go clean <filename/filepath>\t- Clean/Validate/Deduplicate JSON file created by Tempest")
+	fmt.Println("\tgo run main.go clean <filename/filepath>\t- Clean/Validate/Deduplicate JSON || Deduplicate CSV")
 	fmt.Println("\t\tExample:\tgo run main.go clean results.json")
 	fmt.Println("\t\tNOTE:\tReusing a cleaned file for Tempest output will cause further formatting issues")
+	fmt.Println("\t\tNOTE:\tA file extension *(.json/.csv)* will not be automatically appended when cleaning, you must specify the file extension.")
 	fmt.Println()
 	fmt.Println("\tIn order to gracefully shut down Tempest, press `Ctrl + C` in the terminal **ONCE** and wait until the remaining goroutines finish executing (typically <60s)")
 	fmt.Println("\tIn order to forcefully shut down Tempest press `Ctrl + C` in the terminal **TWICE**")
@@ -376,7 +377,7 @@ func main() {
 			writer = csv.NewWriter(csvfile)
 			if !existed { // Check if the specified csv file already existed by referencing the existed flag, if it did not exist:
 				// Create/format headers string slice
-				headers := []string{"source", "link", "title", "description", "service", "uploaded", "type", "size", "length", "filecount", "thumbnail", "downloads", "views"}
+				headers := []string{"source", "link", "title", "description", "service", "uploaded", "type", "size", "filecount", "thumbnail", "downloads", "views"}
 				// Write headers
 				err := writer.Write(headers)
 				if err != nil { //
@@ -401,81 +402,126 @@ func main() {
 			// Set output mode to clean
 			mode = "clean"
 			// Set filename to args[2], append .csv if necessary
-			filename = fixName(args[2], ".json")
+			filename = args[2]
 			fmt.Println("Output Mode: CLEAN")
 			fmt.Println("File Name: ", filename)
 			fmt.Println()
 
-			opened, err := os.Open(filename)
+			if strings.Contains(filename, ".json") {
+				opened, err := os.Open(filename)
 
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "%s\n", err)
-				// Calling to wipe() here is unnecessary, as the clean case doesn't assign any files/writers
-				// Exit with error
-				os.Exit(1)
-			}
-			scanner := bufio.NewScanner(opened)
-			scanner.Split(bufio.ScanLines)
-			var entries []string
-
-			for scanner.Scan() {
-				entries = append(entries, scanner.Text())
-			}
-
-			opened.Close()
-
-			emk := make(map[string]bool)
-			var deduped []string
-			for _, item := range entries {
-				if _, value := emk[item]; !value {
-					emk[item] = true
-					deduped = append(deduped, item)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "%s\n", err)
+					// Calling to wipe() here is unnecessary, as the clean case doesn't assign any files/writers
+					// Exit with error
+					os.Exit(1)
 				}
+				scanner := bufio.NewScanner(opened)
+				scanner.Split(bufio.ScanLines)
+				var entries []string
+
+				for scanner.Scan() {
+					entries = append(entries, scanner.Text())
+				}
+
+				opened.Close()
+
+				emk := make(map[string]bool)
+				var deduped []string
+				for _, item := range entries {
+					if _, value := emk[item]; !value {
+						emk[item] = true
+						deduped = append(deduped, item)
+					}
+				}
+
+				dedupedToString := ""
+
+				for _, entry := range deduped {
+					dedupedToString += (entry + "\n")
+				}
+
+				err = os.WriteFile("clean-"+filename, []byte(dedupedToString), 0600)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "%s\n", err)
+					// Exit with error
+					os.Exit(1)
+				}
+
+				// Attempt to read the specified json file
+				content, err := os.ReadFile("clean-" + filename)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "%s\n", err)
+					// Calling to wipe() here is unnecessary, as the clean case doesn't assign any files/writers
+					// Exit with error
+					os.Exit(1)
+				}
+
+				// Trim newline from end of file
+				middle := strings.TrimRight(string(content), "\n")
+				// Trim the rightmost comma from end file
+				middle = strings.TrimRight(middle, ",")
+				// Append two tabs to the beginning of each entry (formatting)
+				middle = strings.ReplaceAll(middle, "{\"source\":\"", "\t\t{\"source\":\"")
+
+				// Combine the strings
+				comp := "{\n\t\"content\":[\n" + middle + "\n\t]\n}"
+
+				// Attempt to write the combined strings new a new file, with a name based on the specified filename
+				err = os.WriteFile("clean-"+filename, []byte(comp), 0600)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "%s\n", err)
+					// Exit with error
+					os.Exit(1)
+				}
+
+				fmt.Println("Finished cleaning", filename)
+				fmt.Println("Cleaned file name: clean-" + filename)
+				// Exit successfully
+				os.Exit(0)
+			} else if strings.Contains(filename, ".csv") {
+				opened, err := os.Open(filename)
+
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "%s\n", err)
+					// Calling to wipe() here is unnecessary, as the clean case doesn't assign any files/writers
+					// Exit with error
+					os.Exit(1)
+				}
+				scanner := bufio.NewScanner(opened)
+				scanner.Split(bufio.ScanLines)
+				var entries []string
+
+				for scanner.Scan() {
+					entries = append(entries, scanner.Text())
+				}
+
+				opened.Close()
+
+				emk := make(map[string]bool)
+				var deduped []string
+				for _, item := range entries {
+					if _, value := emk[item]; !value {
+						emk[item] = true
+						deduped = append(deduped, item)
+					}
+				}
+
+				dedupedToString := ""
+
+				for _, entry := range deduped {
+					dedupedToString += entry + "\n"
+				}
+
+				err = os.WriteFile("clean-"+filename, []byte(dedupedToString), 0600)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "%s\n", err)
+					// Exit with error
+					os.Exit(1)
+				}
+			} else {
+				fmt.Println("Please specify a file ending in .json or .csv")
 			}
-
-			dedupedToString := ""
-
-			for _, entry := range deduped {
-				dedupedToString += (entry + "\n")
-			}
-
-			err = os.WriteFile("clean-"+filename, []byte(dedupedToString), 0600)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "%s\n", err)
-				// Exit with error
-				os.Exit(1)
-			}
-
-			// Attempt to read the specified json file
-			content, err := os.ReadFile("clean-" + filename)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "%s\n", err)
-				// Calling to wipe() here is unnecessary, as the clean case doesn't assign any files/writers
-				// Exit with error
-				os.Exit(1)
-			}
-
-			// Trim newline from end of file
-			middle := strings.TrimRight(string(content), "\n")
-			// Trim the rightmost comma from end file
-			middle = strings.TrimRight(middle, ",")
-			// Append two tabs to the beginning of each entry (formatting)
-			middle = strings.ReplaceAll(middle, "{\"source\":\"", "\t\t{\"source\":\"")
-
-			// Combine the strings
-			comp := "{\n\t\"content\":[\n" + middle + "\n\t]\n}"
-
-			// Attempt to write the combined strings new a new file, with a name based on the specified filename
-			err = os.WriteFile("clean-"+filename, []byte(comp), 0600)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "%s\n", err)
-				// Exit with error
-				os.Exit(1)
-			}
-
-			fmt.Println("Finished cleaning", filename)
-			fmt.Println("Cleaned file name: clean-" + filename)
-			// Exit successfully
 			os.Exit(0)
 		default: // args[1] was set to something other than json/csv/clean
 			fmt.Fprintf(os.Stderr, "%s\n", errors.New("unrecognized output mode"))

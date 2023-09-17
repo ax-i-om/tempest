@@ -29,7 +29,7 @@ import (
 )
 
 // Compile the RegEx expression to be used in the identification and extraction of the Bunkr links
-var dLink *regexp.Regexp = regexp.MustCompile("(https|http)://(doods|dood).(la|yt|pm|sh|to|ws|one|watch|pro)/((f/[a-z0-9]{10})|((d/[a-z0-9]{32}|(d/[a-z0-9]{31})|(d/[a-z0-9]{12})))|e/[a-z0-9]{12})")
+var dLink *regexp.Regexp = regexp.MustCompile("(https|http)://(doods|dood).(la|re|wf|so|yt|pm|sh|to|ws|one|watch|pro|stream)/((f/[a-z0-9]{10})|((d/[a-z0-9]{32}|(d/[a-z0-9]{31})|(d/[a-z0-9]{12})))|e/[a-z0-9]{12})")
 
 // Extract returns a slice of all Dood links contained within a string, if any.
 func Extract(res string) ([]string, error) {
@@ -59,10 +59,28 @@ func Validate(x string) (bool, error) {
 	}
 }
 
+// Convert takes a slice of Dood links that use varying domains and converts them to an active domain that can be used.
+func Convert(res string) string {
+	post := strings.ReplaceAll(res, "dood.la", "doods.pro")
+	post = strings.ReplaceAll(post, "dood.re", "doods.pro")
+	post = strings.ReplaceAll(post, "dood.wf", "doods.pro")
+	post = strings.ReplaceAll(post, "dood.yt", "doods.pro")
+	post = strings.ReplaceAll(post, "dood.so", "doods.pro")
+	post = strings.ReplaceAll(post, "dood.pm", "doods.pro")
+	post = strings.ReplaceAll(post, "dood.sh", "doods.pro")
+	post = strings.ReplaceAll(post, "dood.to", "doods.pro")
+	post = strings.ReplaceAll(post, "dood.ws", "doods.pro")
+	post = strings.ReplaceAll(post, "dood.one", "doods.pro")
+	post = strings.ReplaceAll(post, "dood.watch", "doods.pro")
+	return post
+}
+
 // Delegate takes a string as an argument and returns a slice of valid Senvid links found within the response (if any) or nil, and an error
 func Delegate(res, source string) ([]models.Entry, error) {
+	// Use Convert() to convert all Dood link domains to doods.pro (the currently active one)
+	c := Convert(res)
 	// Use Extract() to extract any existing Dood links from the converted response
-	x, err := Extract(res)
+	x, err := Extract(c)
 	if err != nil {
 		return nil, err
 	}
@@ -92,44 +110,3 @@ func Delegate(res, source string) ([]models.Entry, error) {
 	// Return nothing, if nothing happens (bruh)
 	return nil, nil
 }
-
-/*
-	// Extract title
-	rt := roughTitle.FindString(contents)
-	r1 := strings.ReplaceAll(rt, `<title>`, ``)
-	title := strings.ReplaceAll(r1, `</title>`, ``)
-
-	// Extract length
-	flength := length.FindString(contents)
-
-	// Extract thumbnail URL
-	thumb := rThumb.FindString(contents)
-
-	// Extract size
-	fsize := size.FindString(contents)
-
-	// Extract date
-	rdate := roughDate.FindString(contents)
-	d1 := strings.ReplaceAll(rdate, `<div class="uploadate"> <i class="fad fa-calendar-alt mr-1"></i> `, ``)
-	uploaded := strings.ReplaceAll(d1, ` </div>`, ``)
-
-*/
-
-/*
-Cannot read valid dood link body as a 403 is returned upon request. Dood requires the client to have JS enabled. Maybe achievable through headless-browser?
-
-// Compile the RegEx expression for extracting the thumbnail URL
-var rThumb *regexp.Regexp = regexp.MustCompile(`(https|http)://img(.*?).jpg`)
-
-// Compile the RegEx expression for extracting the area that contains the title
-var roughTitle *regexp.Regexp = regexp.MustCompile(`<title>(.*?)</title>`)
-
-// Compile the RegEx expression for extracting the area that contains the upload date
-var roughDate *regexp.Regexp = regexp.MustCompile(`<div class="uploadate"> <i class="fad fa-calendar-alt mr-1"></i> (.*?) </div>`)
-
-// Size RegEx expression
-var size *regexp.Regexp = regexp.MustCompile(`(\d+(?:\.\d+)?)\s*([KMGTP]?B)`)
-
-// Compile the RegEx expression for extracting the length
-var length *regexp.Regexp = regexp.MustCompile(`(\d+):(\d+)`)
-*/
