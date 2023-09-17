@@ -270,6 +270,53 @@ func worker(source string) error {
 	return res.Body.Close()
 }
 
+// dedupe removes any duplicate lines from a string and writes the results to a cleaned file
+func dedupe(filename string) error {
+	// Open file
+	opened, err := os.Open(filename)
+	if err != nil {
+		return err
+	}
+	// New scanner, set split function to scan lines
+	scanner := bufio.NewScanner(opened)
+	scanner.Split(bufio.ScanLines)
+
+	var entries []string
+
+	// Append scanned lines to entries
+	for scanner.Scan() {
+		entries = append(entries, scanner.Text())
+	}
+
+	// Close opened file, as we have already read all the contents
+	opened.Close()
+
+	emk := make(map[string]bool)
+	// Results slice
+	var deduped []string
+	for _, item := range entries {
+		if _, value := emk[item]; !value {
+			emk[item] = true
+			deduped = append(deduped, item)
+		}
+	}
+
+	// Emptry string (will be written to file)
+	dedupedToString := ""
+
+	// Append each entry to the string, with a newline
+	for _, entry := range deduped {
+		dedupedToString += entry + "\n"
+	}
+
+	// Write string to clean file, create if it doesn't exist
+	err = os.WriteFile("clean-"+filename, []byte(dedupedToString), 0600)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func main() {
 	// Printing license information to the terminal
 	fmt.Println("Tempest Copyright (C) 2023 Axiom\nThis program comes with ABSOLUTELY NO WARRANTY.\nThis is free software, and you are welcome to redistribute it\nunder certain conditions.")
@@ -391,11 +438,11 @@ func main() {
 				writer.Flush()
 			}
 
-		case "clean": // If csv was specified by args[1]
+		case "clean": // If clean was specified by args[1]
 			if args[2] == "" || len(args[2]) < 1 { // If no filename was specified
 				// Print usage information to the terminal
 				printUsage()
-				fmt.Fprintf(os.Stderr, "%s\n", errors.New("json file name/path not specified"))
+				fmt.Fprintf(os.Stderr, "%s\n", errors.New("json/csv file name/path not specified"))
 				// Exit successfully
 				os.Exit(0)
 			}
@@ -408,43 +455,10 @@ func main() {
 			fmt.Println()
 
 			if strings.Contains(filename, ".json") {
-				opened, err := os.Open(filename)
-
+				// Remove any duplicate lines from json file
+				err := dedupe(filename)
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "%s\n", err)
-					// Calling to wipe() here is unnecessary, as the clean case doesn't assign any files/writers
-					// Exit with error
-					os.Exit(1)
-				}
-				scanner := bufio.NewScanner(opened)
-				scanner.Split(bufio.ScanLines)
-				var entries []string
-
-				for scanner.Scan() {
-					entries = append(entries, scanner.Text())
-				}
-
-				opened.Close()
-
-				emk := make(map[string]bool)
-				var deduped []string
-				for _, item := range entries {
-					if _, value := emk[item]; !value {
-						emk[item] = true
-						deduped = append(deduped, item)
-					}
-				}
-
-				dedupedToString := ""
-
-				for _, entry := range deduped {
-					dedupedToString += (entry + "\n")
-				}
-
-				err = os.WriteFile("clean-"+filename, []byte(dedupedToString), 0600)
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "%s\n", err)
-					// Exit with error
 					os.Exit(1)
 				}
 
@@ -480,43 +494,10 @@ func main() {
 				// Exit successfully
 				os.Exit(0)
 			} else if strings.Contains(filename, ".csv") {
-				opened, err := os.Open(filename)
-
+				// Remove any duplicate lines from CSV file
+				err := dedupe(filename)
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "%s\n", err)
-					// Calling to wipe() here is unnecessary, as the clean case doesn't assign any files/writers
-					// Exit with error
-					os.Exit(1)
-				}
-				scanner := bufio.NewScanner(opened)
-				scanner.Split(bufio.ScanLines)
-				var entries []string
-
-				for scanner.Scan() {
-					entries = append(entries, scanner.Text())
-				}
-
-				opened.Close()
-
-				emk := make(map[string]bool)
-				var deduped []string
-				for _, item := range entries {
-					if _, value := emk[item]; !value {
-						emk[item] = true
-						deduped = append(deduped, item)
-					}
-				}
-
-				dedupedToString := ""
-
-				for _, entry := range deduped {
-					dedupedToString += entry + "\n"
-				}
-
-				err = os.WriteFile("clean-"+filename, []byte(dedupedToString), 0600)
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "%s\n", err)
-					// Exit with error
 					os.Exit(1)
 				}
 			} else {
@@ -534,9 +515,11 @@ func main() {
 		os.Exit(0)
 	}
 
+	// Create new context with cancel
 	cntx := context.Background()
 	cntx, cancel := context.WithCancel(cntx)
 
+	// Make new signal channel
 	sigChannel := make(chan os.Signal, 1)
 	signal.Notify(sigChannel, os.Interrupt)
 
@@ -550,8 +533,10 @@ func main() {
 		os.Exit(2)
 	}()
 
+	// Launch run function with context
 	err = run(cntx)
 
+	// Closes the signal channel
 	func() {
 		signal.Stop(sigChannel)
 		cancel()
