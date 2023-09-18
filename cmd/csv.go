@@ -46,61 +46,62 @@ INCLUDING, BUT NOT LIMITED TO, DATA LOSS AND FILE CORRUPTION`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) < 1 {
 			cmd.Usage()
-			os.Exit(0)
-		}
-		var err error
-		// Set output mode to csv
-		globals.Mode = "csv"
-		// Set filename to args[2], append .csv if necessary
-		globals.Filename = handlers.FixName(args[0], ".csv")
-		fmt.Println("Output Mode:", globals.Mode)
-		fmt.Println("File Name:", globals.Filename)
-		fmt.Println()
-		// Set the globally declared jsonfile variable to filename
-		globals.Csvfile, err = os.OpenFile(globals.Filename, os.O_WRONLY|os.O_APPEND, 0600)
-		// Set existed to true, if it didn't exist, this will be set to false
-		globals.Existed = true
-		if err != nil {
-			// Check if the error occurred because the file doesn't exist
-			if errors.Is(err, os.ErrNotExist) {
-				// If file doesn't exist, create one
-				globals.Csvfile, err = os.OpenFile(globals.Filename, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0600)
-				if err != nil { // Error when attempting to create CSV file, meaning issues could occur when trying to call write()
-					fmt.Fprintf(os.Stderr, "%s\n", err)
+		} else {
+			launch := true
+			var existed bool
+			var err error
+			// Set output mode to csv
+			globals.Mode = "csv"
+			// Set filename to args[2], append .csv if necessary
+			globals.Filename = handlers.FixName(args[0], ".csv")
+			fmt.Println("Output Mode:", globals.Mode)
+			fmt.Println("File Name:", globals.Filename)
+			fmt.Println()
+			// Set the globally declared jsonfile variable to filename
+			globals.Csvfile, err = os.OpenFile(globals.Filename, os.O_WRONLY|os.O_APPEND, 0600)
+			// Set existed to true, if it didn't exist, this will be set to false
+			existed = true
+			if err != nil {
+				// Check if the error occurred because the file doesn't exist
+				if errors.Is(err, os.ErrNotExist) {
+					// If file doesn't exist, create one
+					globals.Csvfile, err = os.OpenFile(globals.Filename, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0600)
+					if err != nil { // Error when attempting to create CSV file, meaning issues could occur when trying to call write()
+						fmt.Fprintf(os.Stderr, "%s\n", err)
+						// Close all files/flush all writers
+						handlers.Wipe()
+						launch = false
+					}
+					// If error doesn't occur when trying to create file, this means one likely did not already exist or may have been overwritten; therefore,
+					// set existed flag to false
+					existed = false
+				} else { // An error unrelated to a files existence/lack-thereof occurred, resulting in an inability to create/open csvfile
 					// Close all files/flush all writers
 					handlers.Wipe()
-					// Exit with error
-					os.Exit(1)
+					fmt.Fprintf(os.Stderr, "%s\n", err)
+					launch = false
 				}
-				// If error doesn't occur when trying to create file, this means one likely did not already exist or may have been overwritten; therefore,
-				// set existed flag to false
-				globals.Existed = false
-			} else { // An error unrelated to a files existence/lack-thereof occurred, resulting in an inability to create/open csvfile
-				// Close all files/flush all writers
-				handlers.Wipe()
-				fmt.Fprintf(os.Stderr, "%s\n", err)
-				// Exit with error
-				os.Exit(1)
+			}
+			// Create a new *csv.Writer that writes to csvfile, assign to globally declared variable writer
+			globals.Writer = csv.NewWriter(globals.Csvfile)
+			if !existed { // Check if the specified csv file already existed by referencing the existed flag, if it did not exist:
+				// Create/format headers string slice
+				headers := []string{"source", "link", "title", "description", "service", "uploaded", "type", "size", "filecount", "thumbnail", "downloads", "views"}
+				// Write headers
+				err := globals.Writer.Write(headers)
+				if err != nil { //
+					// Close all files/flush all writers
+					handlers.Wipe()
+					fmt.Fprintf(os.Stderr, "%s\n", err)
+					launch = false
+				}
+				// Flush writer to ensure contents were written
+				globals.Writer.Flush()
+			}
+			if launch {
+				worker.Launch()
 			}
 		}
-		// Create a new *csv.Writer that writes to csvfile, assign to globally declared variable writer
-		globals.Writer = csv.NewWriter(globals.Csvfile)
-		if !globals.Existed { // Check if the specified csv file already existed by referencing the existed flag, if it did not exist:
-			// Create/format headers string slice
-			headers := []string{"source", "link", "title", "description", "service", "uploaded", "type", "size", "filecount", "thumbnail", "downloads", "views"}
-			// Write headers
-			err := globals.Writer.Write(headers)
-			if err != nil { //
-				// Close all files/flush all writers
-				handlers.Wipe()
-				fmt.Fprintf(os.Stderr, "%s\n", err)
-				// Exit with error
-				os.Exit(1)
-			}
-			// Flush writer to ensure contents were written
-			globals.Writer.Flush()
-		}
-		worker.Launch()
 	},
 }
 

@@ -44,26 +44,28 @@ INCLUDING, BUT NOT LIMITED TO, DATA LOSS AND FILE CORRUPTION`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) < 1 {
 			cmd.Usage()
-			os.Exit(0)
+		} else {
+			launch := true
+			var err error
+			// Set output mode to json
+			globals.Mode = "json"
+			// Set filename to args[2], append .json if necessary
+			globals.Filename = handlers.FixName(args[0], ".json")
+			fmt.Println("Output Mode:", globals.Mode)
+			fmt.Println("File Name:", globals.Filename)
+			fmt.Println()
+			// Set the globally declared jsonfile variable to filename, create one if it doesn't exist
+			globals.Jsonfile, err = os.OpenFile(globals.Filename, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
+			if err != nil { // Error when attempting to open/create JSON file, meaning issues could occur when trying to call write()
+				// Close all files/flush all writers
+				handlers.Wipe()
+				fmt.Fprintf(os.Stderr, "%s\n", err)
+				launch = false
+			}
+			if launch {
+				worker.Launch()
+			}
 		}
-		var err error
-		// Set output mode to json
-		globals.Mode = "json"
-		// Set filename to args[2], append .json if necessary
-		globals.Filename = handlers.FixName(args[0], ".json")
-		fmt.Println("Output Mode:", globals.Mode)
-		fmt.Println("File Name:", globals.Filename)
-		fmt.Println()
-		// Set the globally declared jsonfile variable to filename, create one if it doesn't exist
-		globals.Jsonfile, err = os.OpenFile(globals.Filename, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
-		if err != nil { // Error when attempting to open/create JSON file, meaning issues could occur when trying to call write()
-			// Close all files/flush all writers
-			handlers.Wipe()
-			fmt.Fprintf(os.Stderr, "%s\n", err)
-			// Exit with error
-			os.Exit(1)
-		}
-		worker.Launch()
 	},
 }
 

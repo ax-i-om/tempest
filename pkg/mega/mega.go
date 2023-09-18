@@ -55,7 +55,7 @@ func ExtractFileCount(megaContents string) int {
 	fl := filesLine.FindString(megaContents)          // Extract file count header
 	count, err := strconv.Atoi(digits.FindString(fl)) // Extract number from header and convert to int
 	if err != nil {
-		return -1 // Return -1 to signify an error occured and the filecount could not be converted to Int
+		return -1 // Return -1 to signify an error occurred and the filecount could not be converted to Int
 	}
 	return count
 }

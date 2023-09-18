@@ -28,21 +28,26 @@ import (
 	"github.com/ax-i-om/tempest/pkg/models"
 )
 
-// Stores output mode and filename
-var Mode, Filename string
+// Mode store the specified output mode
+var Mode string
 
-// Checks if a CSV file with filename: filename already exists to determine whether or not to write headers
-var Existed bool
+// Filename stores the output file name
+var Filename string
 
-// Custom sync.WaitGroup that implements a counter, used in run() for graceful cleanup
+// Wg is a sync.WaitGroup that implements a counter, used in run() for graceful cleanup
 var Wg models.WaitGroupCount = models.WaitGroupCount{}
 
-// Mutex lock for write()
+// WriteMutex provides the ability to lock write()
 var WriteMutex sync.Mutex
 
-// Global declaration of files/writers in order to write/flush from anywhere in main
+// Jsonfile is the opened JSON file where the results are written
 var Jsonfile *os.File = nil
+
+// Csvfile is the opened CSV file where results are written
 var Csvfile *os.File = nil
+
+// Writer is used in writing to Csvfile
 var Writer *csv.Writer = nil
 
+// Src is used by the TrueRand function
 var Src = rand.NewSource(time.Now().UnixNano())

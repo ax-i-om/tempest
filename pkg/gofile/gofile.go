@@ -59,7 +59,7 @@ func ExtractFileCount(gofileContents string) int {
 	eCount = strings.ReplaceAll(eCount, ".", "")                                // Strip periods (.)
 	fileCount, err := strconv.Atoi(eCount)
 	if err != nil {
-		return -1 // Return -1 to signify an error occured and the filecount could not be converted to Int
+		return -1 // Return -1 to signify an error occurred and the filecount could not be converted to Int
 	}
 	return fileCount
 }
@@ -72,7 +72,7 @@ func ExtractDownloadCount(gofileContents string) int {
 	eDesc = strings.ReplaceAll(eDesc, `' />`, ``)                                   // Strip unnecessary html
 	downloadCount, err := strconv.Atoi(strings.ReplaceAll(eDesc, ` downloads`, ``)) // Strip text, convert to string
 	if err != nil {
-		return -1 // Return -1 to signify an error occured and the downloadcount could not be converted to Int
+		return -1 // Return -1 to signify an error occurred and the downloadcount could not be converted to Int
 	}
 	return downloadCount
 }

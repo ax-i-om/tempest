@@ -64,7 +64,7 @@ func ExtractViewCount(sendvidContents string) int {
 	eViews = strings.ReplaceAll(eViews, `<p class="hits"><i class="icon-icn-view"></i>`, ``) // Strip unnecessary html
 	viewcount, err := strconv.Atoi(strings.ReplaceAll(eViews, `</p>`, ``))                   // Strip closing tag and convert to int
 	if err != nil {
-		return -1 // Return -1 to signify an error occured and the filecount could not be converted to Int
+		return -1 // Return -1 to signify an error occurred and the filecount could not be converted to Int
 	}
 	return viewcount
 }

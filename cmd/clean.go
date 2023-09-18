@@ -47,69 +47,64 @@ cleaning, you must specify the file extension.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) < 1 {
 			cmd.Usage()
-			os.Exit(0)
-		}
-		// Set output mode to clean
-		globals.Mode = "clean"
-		fmt.Println("Output Mode:", globals.Mode)
-		if strings.Contains(args[0], ".json") {
-			// Set filename to args[2], append .json if necessary
-			globals.Filename = handlers.FixName(args[0], ".json")
-			fmt.Println("File Name:", globals.Filename)
-			fmt.Println()
-			// Remove any duplicate lines from json file
-			err := handlers.Deduplicate(globals.Filename)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "%s\n", err)
-				os.Exit(1)
-			}
-
-			// Attempt to read the specified json file
-			content, err := os.ReadFile("clean-" + globals.Filename)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "%s\n", err)
-				// Calling to wipe() here is unnecessary, as the clean case doesn't assign any files/writers
-				// Exit with error
-				os.Exit(1)
-			}
-
-			// Trim newline from end of file
-			middle := strings.TrimRight(string(content), "\n")
-			// Trim the rightmost comma from end file
-			middle = strings.TrimRight(middle, ",")
-			// Append two tabs to the beginning of each entry (formatting)
-			middle = strings.ReplaceAll(middle, "{\"source\":\"", "\t\t{\"source\":\"")
-
-			// Combine the strings
-			comp := "{\n\t\"content\":[\n" + middle + "\n\t]\n}"
-
-			// Attempt to write the combined strings new a new file, with a name based on the specified filename
-			err = os.WriteFile("clean-"+globals.Filename, []byte(comp), 0600)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "%s\n", err)
-				// Exit with error
-				os.Exit(1)
-			}
-
-			fmt.Println("Finished cleaning", globals.Filename)
-			fmt.Println("Cleaned file name: clean-" + globals.Filename)
-			// Exit successfully
-			os.Exit(0)
-		} else if strings.Contains(args[0], ".csv") {
-			// Set filename to args[2], append .csv if necessary
-			globals.Filename = handlers.FixName(args[0], ".csv")
-			fmt.Println("File Name:", globals.Filename)
-			fmt.Println()
-			// Remove any duplicate lines from CSV file
-			err := handlers.Deduplicate(globals.Filename)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "%s\n", err)
-				os.Exit(1)
-			}
 		} else {
-			fmt.Println("Please specify a file ending in .json or .csv")
+			// Set output mode to clean
+			globals.Mode = "clean"
+			fmt.Println("Output Mode:", globals.Mode)
+			if strings.Contains(args[0], ".json") {
+				// Set filename to args[2], append .json if necessary
+				globals.Filename = handlers.FixName(args[0], ".json")
+				fmt.Println("File Name:", globals.Filename)
+				fmt.Println()
+				// Remove any duplicate lines from json file
+				err := handlers.Deduplicate(globals.Filename)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "%s\n", err)
+					return
+				}
+
+				// Attempt to read the specified json file
+				content, err := os.ReadFile("clean-" + globals.Filename)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "%s\n", err)
+					// Calling to wipe() here is unnecessary, as the clean case doesn't assign any files/writers
+					return
+				}
+
+				// Trim newline from end of file
+				middle := strings.TrimRight(string(content), "\n")
+				// Trim the rightmost comma from end file
+				middle = strings.TrimRight(middle, ",")
+				// Append two tabs to the beginning of each entry (formatting)
+				middle = strings.ReplaceAll(middle, "{\"source\":\"", "\t\t{\"source\":\"")
+
+				// Combine the strings
+				comp := "{\n\t\"content\":[\n" + middle + "\n\t]\n}"
+
+				// Attempt to write the combined strings new a new file, with a name based on the specified filename
+				err = os.WriteFile("clean-"+globals.Filename, []byte(comp), 0600)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "%s\n", err)
+					return
+				}
+
+				fmt.Println("Finished cleaning", globals.Filename)
+				fmt.Println("Cleaned file name: clean-" + globals.Filename)
+			} else if strings.Contains(args[0], ".csv") {
+				// Set filename to args[2], append .csv if necessary
+				globals.Filename = handlers.FixName(args[0], ".csv")
+				fmt.Println("File Name:", globals.Filename)
+				fmt.Println()
+				// Remove any duplicate lines from CSV file
+				err := handlers.Deduplicate(globals.Filename)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "%s\n", err)
+					return
+				}
+			} else {
+				fmt.Println("Please specify a file ending in .json or .csv")
+			}
 		}
-		os.Exit(0)
 	},
 }
 
