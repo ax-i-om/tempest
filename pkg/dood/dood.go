@@ -25,7 +25,7 @@ import (
 	"strings"
 
 	"github.com/ax-i-om/tempest/internal/handlers"
-	"github.com/ax-i-om/tempest/internal/models"
+	"github.com/ax-i-om/tempest/pkg/models"
 )
 
 // Compile the RegEx expression to be used in the identification and extraction of the Bunkr links

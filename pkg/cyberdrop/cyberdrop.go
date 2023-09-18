@@ -28,7 +28,7 @@ import (
 	"time"
 
 	"github.com/ax-i-om/tempest/internal/handlers"
-	"github.com/ax-i-om/tempest/internal/models"
+	"github.com/ax-i-om/tempest/pkg/models"
 )
 
 // Compile RegEx expressions for extraction of links/metadata

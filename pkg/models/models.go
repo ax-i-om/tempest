@@ -15,8 +15,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-
-// Package models contains type declarations and associated functions used in Tempest
+// package models contains types used throughout Tempest
 package models
 
 import (
