@@ -21,6 +21,7 @@ package cmd
 import (
 	"os"
 
+	"github.com/ax-i-om/tempest/internal/handlers"
 	"github.com/spf13/cobra"
 )
 
@@ -51,8 +52,10 @@ agree to the previous statements.`,
 func Execute() {
 	err := rootCmd.Execute()
 	if err != nil {
+		handlers.LogErr(err, "exiting root command with status 1 (err)")
 		os.Exit(1)
 	}
+	handlers.LogInfo("successfully exiting root command")
 	os.Exit(0)
 }
 
@@ -65,5 +68,5 @@ func init() {
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
-	rootCmd.Flags().BoolP("debug", "d", false, "print debug information to the console")
+	rootCmd.PersistentFlags().BoolP("debug", "d", false, "print debug information to the console")
 }

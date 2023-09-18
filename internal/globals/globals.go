@@ -26,7 +26,11 @@ import (
 	"time"
 
 	"github.com/ax-i-om/tempest/pkg/models"
+	"github.com/rs/zerolog"
 )
+
+// DebugFlag stores information about whether or not to print debug information
+var DebugFlag bool
 
 // Mode store the specified output mode
 var Mode string
@@ -51,3 +55,11 @@ var Writer *csv.Writer = nil
 
 // Src is used by the TrueRand function
 var Src = rand.NewSource(time.Now().UnixNano())
+
+// Logger is a global zerolog logger used for printing & debugging
+var Logger zerolog.Logger = zerolog.New(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.RFC3339}).
+	Level(zerolog.TraceLevel).
+	With().
+	Timestamp().
+	Caller().
+	Logger()

@@ -45,8 +45,13 @@ INCLUDING, BUT NOT LIMITED TO, DATA LOSS AND FILE CORRUPTION`,
 		if len(args) < 1 {
 			cmd.Usage()
 		} else {
-			launch := true
 			var err error
+			globals.DebugFlag, err = cmd.Flags().GetBool("debug")
+			if err != nil {
+				fmt.Println("Something went wrong when trying to set Debug mode, continuing without debug")
+				globals.DebugFlag = false
+			}
+			launch := true
 			// Set output mode to json
 			globals.Mode = "json"
 			// Set filename to args[2], append .json if necessary
@@ -57,6 +62,7 @@ INCLUDING, BUT NOT LIMITED TO, DATA LOSS AND FILE CORRUPTION`,
 			// Set the globally declared jsonfile variable to filename, create one if it doesn't exist
 			globals.Jsonfile, err = os.OpenFile(globals.Filename, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
 			if err != nil { // Error when attempting to open/create JSON file, meaning issues could occur when trying to call write()
+				handlers.LogErr(err, "failed to open json file for writing")
 				// Close all files/flush all writers
 				handlers.Wipe()
 				fmt.Fprintf(os.Stderr, "%s\n", err)
@@ -80,5 +86,5 @@ func init() {
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
-	// jsonCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	// jsonCmd.Flags().BoolP("debug", "d", false, "print debug information to the console")
 }

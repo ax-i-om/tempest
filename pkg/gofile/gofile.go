@@ -104,6 +104,7 @@ func Delegate(res, source string) ([]models.Entry, error) {
 	// Use Extract() to extract any existing Gofile links from the response
 	x, err := Extract(res)
 	if err != nil {
+		handlers.LogErr(err, "error occurred on gofile delegate attempt to call extract")
 		return nil, err
 	}
 	// Check if the return slice of Gofile links is empty
@@ -116,6 +117,7 @@ func Delegate(res, source string) ([]models.Entry, error) {
 			x, contents, err := Validate(v)
 			if err != nil {
 				// If any error occurs during the validation process, stop the current iteration and immediately begin with the next link within the slice
+				handlers.LogErr(err, "error occurred on gofile delegate attempt to call validate")
 				continue
 			}
 			// If x, the bool return by Validate(), is true: output the result to the terminal and append the link to the specified results slice.

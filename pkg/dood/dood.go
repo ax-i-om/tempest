@@ -82,6 +82,7 @@ func Delegate(res, source string) ([]models.Entry, error) {
 	// Use Extract() to extract any existing Dood links from the converted response
 	x, err := Extract(c)
 	if err != nil {
+		handlers.LogErr(err, "error occurred on dood delegate attempt to call extract")
 		return nil, err
 	}
 	// Check if the return slice of Dood links is empty
@@ -94,6 +95,7 @@ func Delegate(res, source string) ([]models.Entry, error) {
 			x, err := Validate(v)
 			if err != nil {
 				// If any error occurs during the validation process, stop the current iteration and immediately begin with the next link within the slice
+				handlers.LogErr(err, "error occurred on dood delegate attempt to call validate")
 				continue
 			}
 			// If x, the bool return by Validate(), is true: output the result to the terminal and append the link to the specified results slice.

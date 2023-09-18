@@ -48,8 +48,13 @@ cleaning, you must specify the file extension.`,
 		if len(args) < 1 {
 			cmd.Usage()
 		} else {
+			var err error
+			globals.DebugFlag, err = cmd.Flags().GetBool("debug")
+			if err != nil {
+				fmt.Println("Something went wrong when trying to set Debug mode, continuing without debug")
+				globals.DebugFlag = false
+			}
 			// Set output mode to clean
-			globals.Mode = "clean"
 			fmt.Println("Output Mode:", globals.Mode)
 			if strings.Contains(args[0], ".json") {
 				// Set filename to args[2], append .json if necessary
@@ -60,6 +65,7 @@ cleaning, you must specify the file extension.`,
 				err := handlers.Deduplicate(globals.Filename)
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "%s\n", err)
+					handlers.LogErr(err, "failed to deduplicate "+globals.Filename)
 					return
 				}
 
@@ -67,7 +73,7 @@ cleaning, you must specify the file extension.`,
 				content, err := os.ReadFile("clean-" + globals.Filename)
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "%s\n", err)
-					// Calling to wipe() here is unnecessary, as the clean case doesn't assign any files/writers
+					handlers.LogErr(err, "failed to read clean-"+globals.Filename)
 					return
 				}
 
@@ -85,6 +91,7 @@ cleaning, you must specify the file extension.`,
 				err = os.WriteFile("clean-"+globals.Filename, []byte(comp), 0600)
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "%s\n", err)
+					handlers.LogErr(err, "failed to write cleaned json to file")
 					return
 				}
 
@@ -98,6 +105,7 @@ cleaning, you must specify the file extension.`,
 				// Remove any duplicate lines from CSV file
 				err := handlers.Deduplicate(globals.Filename)
 				if err != nil {
+					handlers.LogErr(err, "failed to deduplicate "+globals.Filename)
 					fmt.Fprintf(os.Stderr, "%s\n", err)
 					return
 				}

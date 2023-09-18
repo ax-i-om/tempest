@@ -47,9 +47,14 @@ INCLUDING, BUT NOT LIMITED TO, DATA LOSS AND FILE CORRUPTION`,
 		if len(args) < 1 {
 			cmd.Usage()
 		} else {
+			var err error
+			globals.DebugFlag, err = cmd.Flags().GetBool("debug")
+			if err != nil {
+				fmt.Println("Something went wrong when trying to set Debug mode, continuing without debug")
+				globals.DebugFlag = false
+			}
 			launch := true
 			var existed bool
-			var err error
 			// Set output mode to csv
 			globals.Mode = "csv"
 			// Set filename to args[2], append .csv if necessary
@@ -64,9 +69,11 @@ INCLUDING, BUT NOT LIMITED TO, DATA LOSS AND FILE CORRUPTION`,
 			if err != nil {
 				// Check if the error occurred because the file doesn't exist
 				if errors.Is(err, os.ErrNotExist) {
+					handlers.LogErr(err, "failed to open csv file: "+globals.Filename+" because it doesn't exist")
 					// If file doesn't exist, create one
 					globals.Csvfile, err = os.OpenFile(globals.Filename, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0600)
 					if err != nil { // Error when attempting to create CSV file, meaning issues could occur when trying to call write()
+						handlers.LogErr(err, "failed to create new csv file: "+globals.Filename+" after discovering it didn't exist")
 						fmt.Fprintf(os.Stderr, "%s\n", err)
 						// Close all files/flush all writers
 						handlers.Wipe()
@@ -76,6 +83,7 @@ INCLUDING, BUT NOT LIMITED TO, DATA LOSS AND FILE CORRUPTION`,
 					// set existed flag to false
 					existed = false
 				} else { // An error unrelated to a files existence/lack-thereof occurred, resulting in an inability to create/open csvfile
+					handlers.LogErr(err, "failed to open csv file: "+globals.Filename+" due to an unexpected error")
 					// Close all files/flush all writers
 					handlers.Wipe()
 					fmt.Fprintf(os.Stderr, "%s\n", err)
@@ -84,12 +92,14 @@ INCLUDING, BUT NOT LIMITED TO, DATA LOSS AND FILE CORRUPTION`,
 			}
 			// Create a new *csv.Writer that writes to csvfile, assign to globally declared variable writer
 			globals.Writer = csv.NewWriter(globals.Csvfile)
+			handlers.LogInfo("CSV Writer initialized")
 			if !existed { // Check if the specified csv file already existed by referencing the existed flag, if it did not exist:
 				// Create/format headers string slice
 				headers := []string{"source", "link", "title", "description", "service", "uploaded", "type", "size", "filecount", "thumbnail", "downloads", "views"}
 				// Write headers
 				err := globals.Writer.Write(headers)
 				if err != nil { //
+					handlers.LogErr(err, "failed to write headers to new csv file")
 					// Close all files/flush all writers
 					handlers.Wipe()
 					fmt.Fprintf(os.Stderr, "%s\n", err)

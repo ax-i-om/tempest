@@ -40,6 +40,12 @@ down Tempest press "Ctrl + C" in the terminal **TWICE**
 CAUTION: FORCEFULLY SHUTTING DOWN TEMPEST MAY RESULT IN ISSUES 
 INCLUDING, BUT NOT LIMITED TO, DATA LOSS AND FILE CORRUPTION`,
 	Run: func(cmd *cobra.Command, args []string) {
+		var err error
+		globals.DebugFlag, err = cmd.Flags().GetBool("debug")
+		if err != nil {
+			fmt.Println("Something went wrong when trying to set Debug mode, continuing without debug")
+			globals.DebugFlag = false
+		}
 		// Set mode to console
 		globals.Mode = "console"
 		fmt.Println("Output Mode: Console")

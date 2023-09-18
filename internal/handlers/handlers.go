@@ -68,7 +68,7 @@ func SwapCheck(err error) {
 			// Ignore this
 		} else {
 			// Handle other types of errors, these may be fatal
-			fmt.Fprintf(os.Stderr, "%s\n", err)
+			LogErr(err, "unidentified error occurred")
 		}
 	}
 }
@@ -92,29 +92,32 @@ func Write(results []models.Entry) {
 		case "console": // If mode is set to console, print results to terminal
 			fmt.Println(v.Service, ": ", v.Link)
 		case "json": // If mode is set to json:
+			LogInfo("starting json write operation")
 			// JSON encode the current iteration's accompanying entry (v)
 			vByte, err := json.Marshal(v)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "%s\n", err)
+				LogErr(err, "failed to marshal entry to json during write operation")
 				continue // immediately start next iteration
 			}
 			// Convert the encoded JSON (type []byte) to the previously opened JSON file.
 			_, err = globals.Jsonfile.WriteString(string(vByte) + ",\n")
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "%s\n", err)
+				LogErr(err, "failed to write json to file during write operation")
 				continue // immediately start next iteration
 			}
 		case "csv": // If mode is set to csv:
+			LogInfo("starting csv write operation")
 			// Create a CSV record based on the current iteration's accompanying entry (v)
 			row := []string{v.Source, v.Link, v.Title, v.Description, v.Service, v.Uploaded, v.Type, v.Size, fmt.Sprint(v.FileCount), v.Thumbnail, fmt.Sprint(v.Downloads), fmt.Sprint(v.Views)}
 			// Write the record
 			err := globals.Writer.Write(row)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "%s\n", err)
+				LogErr(err, "failed to write CSV row during write operation")
 				continue // immediately start next iteration
 			}
 			// Call flush to ensure that the record is written to the CSV file
 			globals.Writer.Flush()
+			LogInfo("successfully wrote row to csv file during write operation")
 		}
 		globals.WriteMutex.Unlock()
 	}
@@ -124,15 +127,26 @@ func Write(results []models.Entry) {
 func Wipe() {
 	// if jsonfile was assigned a value other than nil, close it
 	if globals.Jsonfile != nil {
-		globals.Jsonfile.Close()
+		err := globals.Jsonfile.Close()
+		if err != nil {
+			LogErr(err, "failed to close initialized json file during wipe operation")
+		} else {
+			LogInfo("successfully closed json file during wipe operation")
+		}
 	}
 	// if writer was assigned a value other than nil, close it
 	if globals.Writer != nil {
 		globals.Writer.Flush()
+		LogInfo("successfully flushed writer during wipe operation")
 	}
 	// if csvfile was assigned a value other than nil, close it
 	if globals.Csvfile != nil {
-		globals.Csvfile.Close()
+		err := globals.Csvfile.Close()
+		if err != nil {
+			LogErr(err, "failed to close initialized json file during wipe operation")
+		} else {
+			LogInfo("successfully closed csv file during wipe operation")
+		}
 	}
 }
 
@@ -141,6 +155,7 @@ func Deduplicate(filename string) error {
 	// Open file
 	opened, err := os.Open(filename)
 	if err != nil {
+		LogErr(err, "failed to open "+filename+" during deduplication operation")
 		return err
 	}
 	// New scanner, set split function to scan lines
@@ -178,6 +193,7 @@ func Deduplicate(filename string) error {
 	// Write string to clean file, create if it doesn't exist
 	err = os.WriteFile("clean-"+filename, []byte(dedupedToString), 0600)
 	if err != nil {
+		LogErr(err, "failed to write results to clean-"+filename+" during deduplication operation")
 		return err
 	}
 	return nil
@@ -192,13 +208,29 @@ func GetRes(link string) (*http.Response, error) {
 
 	req, err := http.NewRequest(method, link, nil)
 	if err != nil {
+		LogErr(err, "failed to wrap new request")
 		return nil, err
 	}
 
 	res, err := client.Do(req)
 	if err != nil {
+		if !strings.Contains(err.Error(), "exceeded") {
+			LogErr(err, "failed to send request")
+		}
 		return nil, err
 	}
 
 	return res, nil
+}
+
+func LogErr(err error, msg string) {
+	if globals.DebugFlag {
+		globals.Logger.Err(err).Msg(msg)
+	}
+}
+
+func LogInfo(msg string) {
+	if globals.DebugFlag {
+		globals.Logger.Info().Msg(msg)
+	}
 }

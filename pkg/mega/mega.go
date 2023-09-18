@@ -95,6 +95,7 @@ func Delegate(res, source string) ([]models.Entry, error) {
 	// Use Extract() to extract any existing Mega links from the response
 	x, err := Extract(res)
 	if err != nil {
+		handlers.LogErr(err, "error occurred on mega delegate attempt to call extract")
 		return nil, err
 	}
 	// Check if the return slice of Mega links is empty
@@ -107,6 +108,7 @@ func Delegate(res, source string) ([]models.Entry, error) {
 			x, err := Validate(v)
 			if err != nil {
 				// If any error occurs during the validation process, stop the current iteration and immediately begin with the next link within the slice
+				handlers.LogErr(err, "error occurred on mega delegate attempt to call validate")
 				continue
 			}
 
@@ -115,12 +117,14 @@ func Delegate(res, source string) ([]models.Entry, error) {
 				// Get body contents of the mega folder/file
 				res, err := handlers.GetRes(v)
 				if err != nil {
+					handlers.LogErr(err, "error occurred on mega delegate attempt to call getres")
 					continue
 				}
 
 				// Read results of the *http.Response body
 				body, err := io.ReadAll(res.Body)
 				if err != nil {
+					handlers.LogErr(err, "error occurred on mega delegate attempt to call readall")
 					continue
 				}
 

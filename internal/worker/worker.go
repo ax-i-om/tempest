@@ -21,10 +21,12 @@ package worker
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"os/signal"
+	"strings"
 	"time"
 
 	"github.com/ax-i-om/tempest/internal/globals"
@@ -44,6 +46,9 @@ func worker(source string) error {
 	// Performs a get request on the randomly generated Rentry.co URL.
 	res, err := handlers.GetRes(source)
 	if err != nil {
+		if !strings.Contains(err.Error(), "exceeded") {
+			handlers.LogErr(err, "worker failed to perform get request to "+source)
+		}
 		return err
 	}
 	// If a Status Code of 200 is returned, that means we randomly generated a valid Rentry.co link and can continue
@@ -51,6 +56,7 @@ func worker(source string) error {
 		// Prepare the contents of the response to be read
 		body, err := io.ReadAll(res.Body)
 		if err != nil {
+			handlers.LogErr(err, "worker failed to read contents of res.body")
 			return err
 		}
 		// Convert the slice of bytes to a string
@@ -64,6 +70,7 @@ func worker(source string) error {
 		// Mega Module
 		vMega, err := mega.Delegate(conv, source)
 		if err != nil {
+			handlers.LogErr(err, "worker failed during delegation to Mega module")
 			return err
 		}
 		results = append(results, vMega...)
@@ -71,6 +78,7 @@ func worker(source string) error {
 		// Gofile Module
 		vGofile, err := gofile.Delegate(conv, source)
 		if err != nil {
+			handlers.LogErr(err, "worker failed during delegation to Gofile module")
 			return err
 		}
 		results = append(results, vGofile...)
@@ -78,6 +86,7 @@ func worker(source string) error {
 		// Sendvid Module
 		vSendvid, err := sendvid.Delegate(conv, source)
 		if err != nil {
+			handlers.LogErr(err, "worker failed during delegation to Senvid module")
 			return err
 		}
 		results = append(results, vSendvid...)
@@ -85,6 +94,7 @@ func worker(source string) error {
 		// Cyberdrop Module
 		vCyberdrop, err := cyberdrop.Delegate(conv, source)
 		if err != nil {
+			handlers.LogErr(err, "worker failed during delegation to Cyberdrop module")
 			return err
 		}
 		results = append(results, vCyberdrop...)
@@ -92,6 +102,7 @@ func worker(source string) error {
 		// Bunkr Module
 		vBunkr, err := bunkr.Delegate(conv, source)
 		if err != nil {
+			handlers.LogErr(err, "worker failed during delegation to Bunkr module")
 			return err
 		}
 		results = append(results, vBunkr...)
@@ -99,6 +110,7 @@ func worker(source string) error {
 		// Google Drive Module
 		vGdrive, err := googledrive.Delegate(conv, source)
 		if err != nil {
+			handlers.LogErr(err, "worker failed during delegation to Google Drive module")
 			return err
 		}
 		results = append(results, vGdrive...)
@@ -106,6 +118,7 @@ func worker(source string) error {
 		// Dood Module
 		vDood, err := dood.Delegate(conv, source)
 		if err != nil {
+			handlers.LogErr(err, "worker failed during delegation to Dood module")
 			return err
 		}
 		results = append(results, vDood...)
@@ -119,23 +132,14 @@ func worker(source string) error {
 }
 
 func run(cntx context.Context) error {
+	limited := false
 	for {
 		select {
 		case <-cntx.Done():
-			fmt.Println("  ->  Attempting to gracefully shutdown Tempest")
-			fmt.Println("\nWaiting for", globals.Wg.GetCount(), "GoRoutines to finish execution. Please wait... (~15s)")
-
-			// Wait for all goroutines to finish execution, shouldn't take longer than 15s due to 15s httpclient.Timeout
-			globals.Wg.Wait()
-			// Close all files/flush all writers
-			handlers.Wipe()
-
-			fmt.Println("Tempest was gracefully shut down")
-
 			// Iterate through rest of func main() and eventually exit (a few lines in this case)
 			return nil
 		default:
-			time.Sleep(1 * time.Millisecond) // Sleeps for 1 millisecond (lol)
+			time.Sleep(10 * time.Millisecond) // Sleeps for 1 millisecond (lol)
 
 			// Waitgroup count ++
 			globals.Wg.Add(1)
@@ -147,9 +151,17 @@ func run(cntx context.Context) error {
 				err := worker("https://rentry.co/" + handlers.TrueRand(5, "abcdefghijklmnopqrstuvwxyz0123456789") + "/raw")
 				if err != nil {
 					// Call swapcheck on any errors to check if a swap is necessary
-					handlers.SwapCheck(err)
+					limited = true
+					if !strings.Contains(err.Error(), "exceeded") {
+						handlers.LogErr(err, "worker failed to function properly, starting swapcheck")
+					}
 				}
 			}()
+		}
+		if limited {
+			fmt.Println("ERROR: Rate limited, consider switching connections")
+			handlers.LogErr(errors.New("rate limited"), "Tempest blocked from performing further requests, consider switching proxy/vpn connection")
+			return nil
 		}
 	}
 }
@@ -188,6 +200,13 @@ func Launch() {
 		// Exit with error
 		os.Exit(1)
 	}
-	// Exit successfully
-	os.Exit(0)
+
+	fmt.Println("\nAttempting to gracefully shutdown Tempest")
+	fmt.Println("\nWaiting for", globals.Wg.GetCount(), "GoRoutines to finish execution. Please wait... (~15s)")
+
+	// Wait for all goroutines to finish execution, shouldn't take longer than 15s due to 15s httpclient.Timeout
+	globals.Wg.Wait()
+	// Close all files/flush all writers
+	handlers.Wipe()
+	fmt.Println("Tempest was gracefully shut down")
 }
