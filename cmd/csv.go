@@ -95,7 +95,7 @@ INCLUDING, BUT NOT LIMITED TO, DATA LOSS AND FILE CORRUPTION`,
 			handlers.LogInfo("CSV Writer initialized")
 			if !existed { // Check if the specified csv file already existed by referencing the existed flag, if it did not exist:
 				// Create/format headers string slice
-				headers := []string{"source", "link", "title", "description", "service", "uploaded", "type", "size", "filecount", "thumbnail", "downloads", "views"}
+				headers := []string{"source", "link", "title", "description", "service", "uploaded", "mtime", "type", "size", "filecount", "thumbnail", "downloads", "views", "hash", "malware"}
 				// Write headers
 				err := globals.Writer.Write(headers)
 				if err != nil { //

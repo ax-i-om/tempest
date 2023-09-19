@@ -26,3 +26,4 @@ go.work
 *.csv
 *.csv#
 dist/
+t/

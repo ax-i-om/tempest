@@ -21,7 +21,6 @@ package worker
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -32,6 +31,7 @@ import (
 	"github.com/ax-i-om/tempest/internal/globals"
 	"github.com/ax-i-om/tempest/internal/handlers"
 	"github.com/ax-i-om/tempest/pkg/bunkr"
+	"github.com/ax-i-om/tempest/pkg/cloudmailru"
 	"github.com/ax-i-om/tempest/pkg/cyberdrop"
 	"github.com/ax-i-om/tempest/pkg/dood"
 	"github.com/ax-i-om/tempest/pkg/gofile"
@@ -123,6 +123,14 @@ func worker(source string) error {
 		}
 		results = append(results, vDood...)
 
+		// CloudMailRu Module
+		vCMR, err := cloudmailru.Delegate(conv, source)
+		if err != nil {
+			handlers.LogErr(err, "worker failed during delegation to CloudMailRu module")
+			return err
+		}
+		results = append(results, vCMR...)
+
 		// Call the write function to write the results depending on specified output mode/filename
 		handlers.Write(results)
 	}
@@ -132,10 +140,19 @@ func worker(source string) error {
 }
 
 func run(cntx context.Context) error {
-	limited := false
 	for {
 		select {
 		case <-cntx.Done():
+			fmt.Println("  ->  Attempting to gracefully shutdown Tempest")
+			fmt.Println("\nWaiting for", globals.Wg.GetCount(), "GoRoutines to finish execution. Please wait... (~15s)")
+
+			// Wait for all goroutines to finish execution, shouldn't take longer than 15s due to 15s httpclient.Timeout
+			globals.Wg.Wait()
+			// Close all files/flush all writers
+			handlers.Wipe()
+
+			fmt.Println("Tempest was gracefully shut down")
+
 			// Iterate through rest of func main() and eventually exit (a few lines in this case)
 			return nil
 		default:
@@ -148,20 +165,8 @@ func run(cntx context.Context) error {
 				// When func execution is complete, subtract 1 from waitgroup
 				defer globals.Wg.Done()
 				// Generate a random, 5 char long string [a-z0-9] and place it in the rentry.co string, pass as an argument to worker()
-				err := worker("https://rentry.co/" + handlers.TrueRand(5, "abcdefghijklmnopqrstuvwxyz0123456789") + "/raw")
-				if err != nil {
-					// Call swapcheck on any errors to check if a swap is necessary
-					limited = true
-					if !strings.Contains(err.Error(), "exceeded") {
-						handlers.LogErr(err, "worker failed to function properly, starting swapcheck")
-					}
-				}
+				_ = worker("https://rentry.co/" + handlers.TrueRand(5, "abcdefghijklmnopqrstuvwxyz0123456789") + "/raw")
 			}()
-		}
-		if limited {
-			fmt.Println("ERROR: Rate limited, consider switching connections")
-			handlers.LogErr(errors.New("rate limited"), "Tempest blocked from performing further requests, consider switching proxy/vpn connection")
-			return nil
 		}
 	}
 }
@@ -200,13 +205,5 @@ func Launch() {
 		// Exit with error
 		os.Exit(1)
 	}
-
-	fmt.Println("\nAttempting to gracefully shutdown Tempest")
-	fmt.Println("\nWaiting for", globals.Wg.GetCount(), "GoRoutines to finish execution. Please wait... (~15s)")
-
-	// Wait for all goroutines to finish execution, shouldn't take longer than 15s due to 15s httpclient.Timeout
-	globals.Wg.Wait()
-	// Close all files/flush all writers
-	handlers.Wipe()
-	fmt.Println("Tempest was gracefully shut down")
+	os.Exit(0)
 }

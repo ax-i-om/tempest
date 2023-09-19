@@ -3,7 +3,7 @@
     <h1 align="center">Tempest</h1>
   <p align="center">
     <a href="https://pkg.go.dev/github.com/ax-i-om/tempest#section-directories"><img src="https://pkg.go.dev/badge/github.com/ax-i-om/tempest.svg" alt=""></a>
-    <a><img src="https://img.shields.io/badge/version-0.8.0-blue.svg" alt="v0.8.0"></a>
+    <a><img src="https://img.shields.io/badge/version-0.9.0-blue.svg" alt="v0.9.0"></a>
     <a href="https://goreportcard.com/report/github.com/ax-i-om/tempest"><img src="https://goreportcard.com/badge/github.com/ax-i-om/tempest" alt="Go Report Card"></a><br>
     <a href="https://app.deepsource.com/gh/ax-i-om/tempest/" target="_blank"><img alt="DeepSource" title="DeepSource" src="https://app.deepsource.com/gh/ax-i-om/tempest.svg/?label=active+issues&show_trend=true"/></a><br>
    Leverage paste sites as a medium for discovery of objectionable/infringing materials. <br>
@@ -85,6 +85,7 @@ Append `-d` or `--debug` flag to the command to print more detailed logs
 | Module        | Status       | Information Extracted                                                            |
 | :-----------: | ------------ | :------------------------------------------------------------------------------: |
 | Bunkr         | Functioning  | Link, Title, Service, Type, Size, FileCount, Thumbnail, Views                    |
+| CloudMailRu   | Functioning  | Link, Title, Service, Type, Size, MTime, Hash, Malware                           |
 | Cyberdrop     | Functioning  | Link, Title, Service, Type, Size, FileCount, Thumbnail, Description, UploadDate  |
 | Dood          | Functioning  | Link, Service, Type                                                              |
 | Gofile        | Functioning  | Link, Title, Service, Type, FileCount, Downloads                                 |
@@ -95,6 +96,7 @@ Append `-d` or `--debug` flag to the command to print more detailed logs
 ### Entry Format
 
 ``` go
+// Entry represents the extracted link and it's accompanying data.
 type Entry struct {
 	Source string `json:"source"`
 	Link   string `json:"link"`
@@ -102,7 +104,9 @@ type Entry struct {
 	Title       string `json:"title"`
 	Description string `json:"description"`
 	Service     string `json:"service"`
-	Uploaded    string `json:"uploaded"`
+
+	Uploaded string `json:"uploaded"`
+	Mtime    string `json:"mtime"`
 
 	Type      string `json:"type"`
 	Size      string `json:"size"`
@@ -111,6 +115,9 @@ type Entry struct {
 	Thumbnail string `json:"thumbnail"`
 	Downloads int    `json:"downloads"`
 	Views     int    `json:"views"`
+
+	Hash    string `json:"hash"`
+	Malware string `json:"malware"`
 }
 ```
 

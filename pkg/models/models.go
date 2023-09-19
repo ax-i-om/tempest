@@ -31,7 +31,9 @@ type Entry struct {
 	Title       string `json:"title"`
 	Description string `json:"description"`
 	Service     string `json:"service"`
-	Uploaded    string `json:"uploaded"`
+
+	Uploaded string `json:"uploaded"`
+	Mtime    string `json:"mtime"`
 
 	Type      string `json:"type"`
 	Size      string `json:"size"`
@@ -40,6 +42,29 @@ type Entry struct {
 	Thumbnail string `json:"thumbnail"`
 	Downloads int    `json:"downloads"`
 	Views     int    `json:"views"`
+
+	Hash    string `json:"hash"`
+	Malware string `json:"malware"`
+}
+
+// // CMRInfo represents the extracted metadata from cloud.mail.ru files/folders
+type CMRInfo struct {
+	Name    string `json:"name"`
+	Weblink string `json:"weblink"`
+	Size    int    `json:"size"`
+	Mtime   int    `json:"mtime"`
+	Hash    string `json:"hash"`
+	Kind    string `json:"kind"`
+	Type    string `json:"type"`
+	Malware struct {
+		Status string `json:"status"`
+	} `json:"malware"`
+	Public struct {
+		Type  string `json:"type"`
+		Name  string `json:"name"`
+		ID    string `json:"id"`
+		Ctime int    `json:"ctime"`
+	} `json:"public"`
 }
 
 // WaitGroupCount represents a countable sync.WaitGroup
