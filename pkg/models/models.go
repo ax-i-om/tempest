@@ -47,7 +47,7 @@ type Entry struct {
 	Malware string `json:"malware"`
 }
 
-// // CMRInfo represents the extracted metadata from cloud.mail.ru files/folders
+// CMRInfo represents the extracted metadata from cloud.mail.ru files/folders
 type CMRInfo struct {
 	Name    string `json:"name"`
 	Weblink string `json:"weblink"`
