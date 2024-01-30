@@ -3,7 +3,7 @@
     <h1 align="center">Tempest</h1>
   <p align="center">
     <a href="https://pkg.go.dev/github.com/ax-i-om/tempest#section-directories"><img src="https://pkg.go.dev/badge/github.com/ax-i-om/tempest.svg" alt=""></a>
-    <a><img src="https://img.shields.io/badge/version-0.9.1-blue.svg" alt="v0.9.1"></a>
+    <a><img src="https://img.shields.io/badge/version-0.9.2-blue.svg" alt="v0.9.2"></a>
     <a href="https://goreportcard.com/report/github.com/ax-i-om/tempest"><img src="https://goreportcard.com/badge/github.com/ax-i-om/tempest" alt="Go Report Card"></a><br>
     <a href="https://app.deepsource.com/gh/ax-i-om/tempest/" target="_blank"><img alt="DeepSource" title="DeepSource" src="https://app.deepsource.com/gh/ax-i-om/tempest.svg/?label=active+issues&show_trend=true"/></a><br>
    Leverage paste sites as a medium for discovery of objectionable/infringing materials. <br>

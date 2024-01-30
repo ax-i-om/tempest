@@ -51,6 +51,8 @@ func Convert(res string) string {
 	post = strings.ReplaceAll(post, "bunkr.ru", "bunkrr.su")
 	post = strings.ReplaceAll(post, "bunkr.su", "bunkrr.su")
 	post = strings.ReplaceAll(post, "bunkr.la", "bunkrr.su")
+	post = strings.ReplaceAll(post, "bunkr.sk", "bunkrr.su")
+	post = strings.ReplaceAll(post, "bunkr.si", "bunkrr.su")
 	return post
 }
 

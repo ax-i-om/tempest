@@ -156,7 +156,7 @@ func run(cntx context.Context) error {
 			// Iterate through rest of func main() and eventually exit (a few lines in this case)
 			return nil
 		default:
-			time.Sleep(10 * time.Millisecond) // Sleeps for 1 millisecond (lol)
+			time.Sleep(50 * time.Millisecond) // Sleeps for 50 milliseconds
 
 			// Waitgroup count ++
 			globals.Wg.Add(1)
