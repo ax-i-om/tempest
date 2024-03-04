@@ -3,7 +3,7 @@
     <h1 align="center">Tempest</h1>
   <p align="center">
     <a href="https://pkg.go.dev/github.com/ax-i-om/tempest#section-directories"><img src="https://pkg.go.dev/badge/github.com/ax-i-om/tempest.svg" alt=""></a>
-    <a><img src="https://img.shields.io/badge/version-0.9.2-blue.svg" alt="v0.9.2"></a>
+    <a><img src="https://img.shields.io/badge/version-0.9.3-blue.svg" alt="v0.9.3"></a>
     <a href="https://goreportcard.com/report/github.com/ax-i-om/tempest"><img src="https://goreportcard.com/badge/github.com/ax-i-om/tempest" alt="Go Report Card"></a><br>
     <a href="https://app.deepsource.com/gh/ax-i-om/tempest/" target="_blank"><img alt="DeepSource" title="DeepSource" src="https://app.deepsource.com/gh/ax-i-om/tempest.svg/?label=active+issues&show_trend=true"/></a><br>
    Leverage paste sites as a medium for discovery of objectionable/infringing materials. <br>
@@ -39,9 +39,11 @@ Tempest is a simple, lightweight, and cross-platform solution designed to enable
 
 ### Disclaimer
 
-
-
 It is the end user's responsibility to obey all applicable local, state, and federal laws. Developers assume no liability and are not responsible for any misuse or damage caused by this program. By using Tempest, you agree to the previous statements.
+
+### AI Disclosure
+
+The Tempest logo/symbol/mark was generated using OpenAI's DALL-E 2 AI system.
 
 ### Installation
 1. Fetch the repository via ***git clone***: `git clone https://github.com/ax-i-om/tempest.git`
