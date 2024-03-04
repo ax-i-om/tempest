@@ -17,6 +17,7 @@
   - [About](#about)
   - [Features](#features)
   - [Disclaimer](#disclaimer)
+  - [AI Disclosure](#ai-disclosure)
   - [Installation](#installation)
   - [Usage](#usage)
   - [Cloud Storage / File Sharing Platform Modules](#cloud-storage--file-sharing-platform-modules)
